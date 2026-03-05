@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { PurchaseProvider } from './context/PurchaseContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -11,7 +12,9 @@ const root = ReactDOM.createRoot(rootElement);
 
 const Main = () => (
   <React.StrictMode>
-    <App />
+    <PurchaseProvider>
+      <App />
+    </PurchaseProvider>
   </React.StrictMode>
 );
 

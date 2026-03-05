@@ -20,6 +20,8 @@ import {
   ShoppingCartIcon
 } from './components/icons';
 import { Onboarding } from './components/Onboarding';
+import { usePurchase } from './context/PurchaseContext';
+import { PaywallModal } from './components/PaywallModal';
 
 type Screen = 'menu' | 'simulator';
 
@@ -107,9 +109,11 @@ const formatCurrency = (value: number) => {
     maximumFractionDigits: 0
   }).format(value);
 };
+const PREMIUM_CREDIT_TYPES: CreditType[] = ['hipotecario', 'vehicular', 'microcredito'];
+
 const App = () => {
-  // 🔓 Estado PRO (por ahora siempre false, luego Apple lo activará)
-  const [isPro, setIsPro] = useState(false);
+  const { isPremium } = usePurchase();
+  const [showPaywall, setShowPaywall] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -145,6 +149,10 @@ const App = () => {
   };
 
   const startSimulation = (type: CreditType) => {
+    if (PREMIUM_CREDIT_TYPES.includes(type) && !isPremium) {
+      setShowPaywall(true);
+      return;
+    }
     setSimulationToLoad({
       details: creditTypeConfig[type].defaultDetails,
       type
@@ -201,12 +209,20 @@ const App = () => {
       </header>
 
       <main className="flex-grow container mx-auto px-4 py-6 sm:px-6 sm:py-8 md:px-8 max-w-5xl pt-[80px] pb-[100px]">
-        {screen === 'menu' && <MainMenu onStart={startSimulation} />}
+        {screen === 'menu' && (
+          <MainMenu
+            onStart={startSimulation}
+            isPremium={isPremium}
+            onShowPaywall={() => setShowPaywall(true)}
+          />
+        )}
         {screen === 'simulator' && simulationToLoad && (
           <Simulator
             onBack={backToMenu}
             creditType={simulationToLoad.type}
             initialDetails={simulationToLoad.details}
+            isPremium={isPremium}
+            onShowPaywall={() => setShowPaywall(true)}
           />
         )}
       </main>
@@ -214,12 +230,21 @@ const App = () => {
       <footer className="fixed bottom-0 left-0 w-full h-[100px] z-50 bg-transparent">
         <div id="bottom-ad"></div>
       </footer>
+
+      {showPaywall && <PaywallModal onClose={() => setShowPaywall(false)} />}
     </div>
   );
 };
 
-const MainMenu = ({ onStart }: { onStart: (type: CreditType) => void }) => {
-  // Mapeo de iconos personalizados según tipo de crédito
+const MainMenu = ({
+  onStart,
+  isPremium,
+  onShowPaywall,
+}: {
+  onStart: (type: CreditType) => void;
+  isPremium: boolean;
+  onShowPaywall: () => void;
+}) => {
   const customIcons: Record<CreditType, string> = {
     hipotecario: "/icons/Hipotecario.svg",
     vehicular: "/icons/Vehicular.svg",
@@ -230,7 +255,7 @@ const MainMenu = ({ onStart }: { onStart: (type: CreditType) => void }) => {
   return (
     <div className="flex flex-col items-center text-center min-h-[calc(100vh-7rem)] sm:min-h-[calc(100vh-8rem)]">
       <div className="pt-8 md:pt-12 w-full">
-        
+
         {/* LOGO SUPERIOR */}
         <div className="flex justify-center mb-3">
           <img
@@ -250,47 +275,97 @@ const MainMenu = ({ onStart }: { onStart: (type: CreditType) => void }) => {
           {(Object.keys(creditTypeConfig) as CreditType[]).map((type) => {
             const { title } = creditTypeConfig[type];
             const iconPath = customIcons[type];
+            const isPremiumType = PREMIUM_CREDIT_TYPES.includes(type);
+            const locked = isPremiumType && !isPremium;
 
             return (
               <button
                 key={type}
                 onClick={() => onStart(type)}
-                className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 
-                           border-2 border-turquoise/30 rounded-2xl p-4 transition-all duration-300 
-                           hover:border-turquoise hover:shadow-2xl hover:shadow-turquoise/20 hover:-translate-y-1"
+                className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900
+                           border-2 rounded-2xl p-4 transition-all duration-300
+                           hover:shadow-2xl hover:-translate-y-1"
+                style={{
+                  borderColor: locked ? 'rgba(156,163,175,0.2)' : 'rgba(0,185,174,0.3)',
+                }}
               >
                 {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-turquoise/0 to-turquoise/0 
+                <div className="absolute inset-0 bg-gradient-to-br from-turquoise/0 to-turquoise/0
                                 group-hover:from-turquoise/10 group-hover:to-turquoise/5 transition-all duration-300" />
+
+                {/* Lock badge */}
+                {locked && (
+                  <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3 h-3 text-gray-400">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                )}
 
                 {/* CONTENIDO */}
                 <div className="relative flex flex-col items-center gap-3">
 
                   {/* ÍCONO PERSONALIZADO */}
                   <div
-                    className="w-12 h-12 flex items-center justify-center rounded-full bg-turquoise/10 
-                               border-2 border-turquoise/30 overflow-hidden 
-                               group-hover:bg-turquoise/20 group-hover:border-turquoise 
+                    className="w-12 h-12 flex items-center justify-center rounded-full overflow-hidden
                                transition-all duration-300 group-active:scale-110"
+                    style={{
+                      backgroundColor: locked ? 'rgba(156,163,175,0.08)' : 'rgba(0,185,174,0.1)',
+                      border: locked ? '2px solid rgba(156,163,175,0.2)' : '2px solid rgba(0,185,174,0.3)',
+                      opacity: locked ? 0.6 : 1,
+                    }}
                   >
                     <img
                       src={iconPath}
                       alt={title}
                       className="w-7 h-7 object-contain select-none"
                       draggable={false}
+                      style={{ filter: locked ? 'grayscale(1) opacity(0.5)' : 'none' }}
                     />
                   </div>
 
                   {/* TÍTULO */}
-                  <span className="text-lg font-bold text-white group-hover:text-turquoise transition-colors duration-300">
+                  <span
+                    className="text-lg font-bold transition-colors duration-300"
+                    style={{ color: locked ? 'rgba(156,163,175,0.7)' : 'white' }}
+                  >
                     {title}
                   </span>
+
+                  {locked && (
+                    <span className="text-xs text-gray-500 font-medium -mt-1">Solo Premium</span>
+                  )}
                 </div>
               </button>
             );
           })}
 
         </div>
+
+        {/* Premium CTA banner for free users */}
+        {!isPremium && (
+          <div className="mt-6 max-w-2xl mx-auto">
+            <button
+              onClick={onShowPaywall}
+              className="w-full py-3 px-5 rounded-2xl border border-[#00B9AE]/30 bg-[#00B9AE]/5 hover:bg-[#00B9AE]/10 transition-all duration-200 flex items-center justify-between gap-3"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(0,185,174,0.15)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#00B9AE" strokeWidth={2} className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 3l14 9-14 9V3z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-white">Desbloquear Premium</p>
+                  <p className="text-xs text-gray-400">Accede a todos los simuladores</p>
+                </div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#00B9AE" strokeWidth={2} className="w-4 h-4 flex-shrink-0">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* DISCLAIMER INFERIOR */}
@@ -316,11 +391,15 @@ const MainMenu = ({ onStart }: { onStart: (type: CreditType) => void }) => {
 const Simulator = ({
   onBack,
   initialDetails,
-  creditType
+  creditType,
+  isPremium,
+  onShowPaywall,
 }: {
   onBack: () => void;
   initialDetails: Partial<LoanDetails>;
   creditType: CreditType;
+  isPremium: boolean;
+  onShowPaywall: () => void;
 }) => {
   const config = creditTypeConfig[creditType];
 
@@ -920,12 +999,13 @@ const handleMontoPrestamoChange = (value: number) => {
 
       {results && (
         <div className="mt-10">
-        <ResultsDisplay
-  results={results}
-  details={details}
-  title={'crédito'}
-  isPro={false}
-/>
+          <ResultsDisplay
+            results={results}
+            details={details}
+            title={'crédito'}
+            isPro={isPremium}
+            onShowPaywall={onShowPaywall}
+          />
         </div>
       )}
     </div>
@@ -943,29 +1023,28 @@ const ResultsDisplay = ({
   details,
   title,
   isPro,
-}: ResultsProps & { isPro: boolean }) => {
+  onShowPaywall,
+}: ResultsProps & { isPro: boolean; onShowPaywall: () => void }) => {
   const [showTable, setShowTable] = useState(false);
 
   const tableData =
     results.nuevaTablaAmortizacion || results.tablaAmortizacion;
 
-const handleExportPdf = () => {
-  if (!isPro) {
-    alert('Esta función está disponible solo en la versión PRO');
-    return;
-  }
+  const handleExportPdf = () => {
+    if (!isPro) {
+      onShowPaywall();
+      return;
+    }
+    generatePdf(results, details, title);
+  };
 
-  generatePdf(results, details, title);
-};
-
-const handleExportExcel = () => {
-  if (!isPro) {
-    alert('Esta función está disponible solo en la versión PRO');
-    return;
-  }
-
-  generateExcel(results, details, title);
-};
+  const handleExportExcel = () => {
+    if (!isPro) {
+      onShowPaywall();
+      return;
+    }
+    generateExcel(results, details, title);
+  };
 
   const savingsMessage = (
     <div className="bg-green-900/50 text-green-300 p-4 rounded-lg text-center font-medium border border-green-700/50">
@@ -1120,18 +1199,37 @@ const handleExportExcel = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <button
               onClick={handleExportPdf}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-transparent border-2 text-[#27b9ab] font-medium rounded-xl hover:text-white transition-all shadow-sm"
-              style={{ borderColor: '#27b9ab' }}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-transparent border-2 font-medium rounded-xl transition-all shadow-sm"
+              style={{
+                borderColor: isPro ? '#27b9ab' : 'rgba(39,185,171,0.4)',
+                color: isPro ? '#27b9ab' : 'rgba(39,185,171,0.5)',
+              }}
             >
-              <DownloadIcon className="w-5 h-5" />
+              {isPro ? (
+                <DownloadIcon className="w-5 h-5" />
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              )}
               Exportar a PDF
             </button>
 
             <button
               onClick={handleExportExcel}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-transparent border-2 border-green-500 text-green-500 font-medium rounded-xl hover:bg-green-500 hover:text-white transition-all shadow-sm"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-transparent border-2 font-medium rounded-xl transition-all shadow-sm"
+              style={{
+                borderColor: isPro ? 'rgb(34,197,94)' : 'rgba(34,197,94,0.4)',
+                color: isPro ? 'rgb(34,197,94)' : 'rgba(34,197,94,0.5)',
+              }}
             >
-              <TableCellsIcon className="w-5 h-5" />
+              {isPro ? (
+                <TableCellsIcon className="w-5 h-5" />
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              )}
               Exportar a Excel
             </button>
           </div>
