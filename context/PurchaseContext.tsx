@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
 
 const REVENUECAT_API_KEY_IOS = 'appl_REPLACE_WITH_YOUR_IOS_KEY';
 const REVENUECAT_API_KEY_ANDROID = 'goog_REPLACE_WITH_YOUR_ANDROID_KEY';
@@ -35,6 +34,7 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
       return;
     }
     try {
+      const { Purchases } = await import('@revenuecat/purchases-capacitor');
       const { customerInfo } = await Purchases.getCustomerInfo();
       const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
       setIsPremium(!!entitlement?.isActive);
@@ -54,20 +54,24 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
     const platform = Capacitor.getPlatform();
     const apiKey = platform === 'ios' ? REVENUECAT_API_KEY_IOS : REVENUECAT_API_KEY_ANDROID;
 
-    Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
-    Purchases.configure({ apiKey }).then(() => {
-      checkEntitlement();
-    }).catch(() => {
-      setIsLoading(false);
-    });
-
     const listenerRef = { remove: () => {} };
 
-    Purchases.addCustomerInfoUpdateListener((customerInfo) => {
-      const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
-      setIsPremium(!!entitlement?.isActive);
-    }).then((listener) => {
-      listenerRef.remove = listener.remove;
+    import('@revenuecat/purchases-capacitor').then(({ Purchases, LOG_LEVEL }) => {
+      Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
+      Purchases.configure({ apiKey }).then(() => {
+        checkEntitlement();
+      }).catch(() => {
+        setIsLoading(false);
+      });
+
+      Purchases.addCustomerInfoUpdateListener((customerInfo) => {
+        const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+        setIsPremium(!!entitlement?.isActive);
+      }).then((listener) => {
+        listenerRef.remove = listener.remove;
+      });
+    }).catch(() => {
+      setIsLoading(false);
     });
 
     return () => {
@@ -81,10 +85,11 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
       return;
     }
     try {
+      const { Purchases } = await import('@revenuecat/purchases-capacitor');
       const { offerings } = await Purchases.getOfferings();
       const offering = offerings.current;
 
-      let targetPackage = offering?.availablePackages?.find(
+      const targetPackage = offering?.availablePackages?.find(
         (pkg) => pkg.product.identifier === PRODUCT_ID
       ) ?? offering?.availablePackages?.[0];
 
@@ -108,6 +113,7 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
       return;
     }
     try {
+      const { Purchases } = await import('@revenuecat/purchases-capacitor');
       const { customerInfo } = await Purchases.restorePurchases();
       const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
       setIsPremium(!!entitlement?.isActive);
