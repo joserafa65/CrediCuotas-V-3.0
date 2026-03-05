@@ -245,7 +245,7 @@ const MainMenu = ({ onStart }: { onStart: (type: CreditType) => void }) => {
         </p>
 
         {/* BOTONES DE CRÉDITO */}
-        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
+        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl mx-auto">
 
           {(Object.keys(creditTypeConfig) as CreditType[]).map((type) => {
             const { title } = creditTypeConfig[type];
