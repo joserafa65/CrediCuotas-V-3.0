@@ -204,8 +204,8 @@ const App = () => {
   // App principal
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-900 via-slate-900 to-gray-900 text-gray-100">
-      <header className="fixed top-0 left-0 w-full h-[80px] z-50 bg-transparent">
-        <div id="top-ad"></div>
+      <header className="fixed top-0 left-0 w-full h-[80px] z-50 bg-transparent pointer-events-none">
+        <div id="top-ad" className="pointer-events-auto"></div>
       </header>
 
       <main className="flex-grow container mx-auto px-4 py-6 sm:px-6 sm:py-8 md:px-8 max-w-5xl pt-[80px] pb-[100px]">
@@ -227,8 +227,8 @@ const App = () => {
         )}
       </main>
 
-      <footer className="fixed bottom-0 left-0 w-full h-[100px] z-50 bg-transparent">
-        <div id="bottom-ad"></div>
+      <footer className="fixed bottom-0 left-0 w-full h-[100px] z-50 bg-transparent pointer-events-none">
+        <div id="bottom-ad" className="pointer-events-auto"></div>
       </footer>
 
       {showPaywall && <PaywallModal onClose={() => setShowPaywall(false)} />}
