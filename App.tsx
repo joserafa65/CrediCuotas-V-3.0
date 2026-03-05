@@ -22,6 +22,7 @@ import {
 import { Onboarding } from './components/Onboarding';
 import { usePurchase } from './context/PurchaseContext';
 import { PaywallModal } from './components/PaywallModal';
+import { SettingsModal } from './components/SettingsModal';
 
 type Screen = 'menu' | 'simulator';
 
@@ -168,6 +169,7 @@ const NumericInput = ({
 const App = () => {
   const { isPremium } = usePurchase();
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -264,6 +266,7 @@ const App = () => {
             onStart={startSimulation}
             isPremium={isPremium}
             onShowPaywall={() => setShowPaywall(true)}
+            onShowSettings={() => setShowSettings(true)}
           />
         )}
         {screen === 'simulator' && simulationToLoad && (
@@ -282,6 +285,7 @@ const App = () => {
       </footer>
 
       {showPaywall && <PaywallModal onClose={() => setShowPaywall(false)} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 };
@@ -290,10 +294,12 @@ const MainMenu = ({
   onStart,
   isPremium,
   onShowPaywall,
+  onShowSettings,
 }: {
   onStart: (type: CreditType) => void;
   isPremium: boolean;
   onShowPaywall: () => void;
+  onShowSettings: () => void;
 }) => {
   const customIcons: Record<CreditType, string> = {
     hipotecario: "/icons/Hipotecario.svg",
@@ -434,6 +440,19 @@ const MainMenu = ({
           <p>
             El resultado no constituye una oferta vinculante ni un compromiso de crédito.
           </p>
+        </div>
+
+        <div className="flex justify-center mt-5">
+          <button
+            onClick={onShowSettings}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-gray-500 hover:text-gray-300 hover:bg-slate-800/60 transition-all"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-xs">Configuración</span>
+          </button>
         </div>
       </div>
     </div>
