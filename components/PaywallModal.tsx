@@ -97,37 +97,43 @@ export const PaywallModal = ({ onClose }: PaywallModalProps) => {
             </p>
           </div>
 
-          {/* Price highlight */}
-          <div className="mb-3 py-3 px-4 rounded-2xl text-center" style={{ background: 'linear-gradient(135deg, rgba(0,185,174,0.15), rgba(0,185,174,0.05))', border: '1.5px solid rgba(0,185,174,0.4)' }}>
+          {/* Price highlight — clickable CTA */}
+          <button
+            onClick={handlePurchase}
+            disabled={purchasing}
+            className="w-full mb-3 py-3 px-4 rounded-2xl text-center transition-all duration-200 active:scale-[0.98] disabled:opacity-60"
+            style={{
+              background: 'transparent',
+              border: '1.5px solid rgba(0,185,174,0.4)',
+              boxShadow: purchasing ? 'none' : '0 0 16px rgba(0,185,174,0.2)',
+            }}
+          >
             <p className="text-lg font-bold text-white tracking-tight">
-              Desbloquear todo por <span style={{ color: '#00B9AE' }}>$5.99</span>
+              {purchasing ? 'Procesando...' : <>Desbloquear todo por <span style={{ color: '#00B9AE' }}>$5.99</span></>}
             </p>
             <p className="mt-0.5 text-xs font-semibold tracking-wide uppercase" style={{ color: '#F59E0B' }}>
               Pago único · Sin suscripciones
             </p>
-          </div>
-
-          {/* CTA button */}
-          <button
-            onClick={handlePurchase}
-            disabled={purchasing}
-            className="w-full py-4 rounded-2xl font-semibold text-white text-base transition-all duration-200 active:scale-[0.98] disabled:opacity-60"
-            style={{
-              background: purchasing ? '#00B9AE88' : 'linear-gradient(135deg, #00B9AE, #00968C)',
-              boxShadow: '0 8px 24px rgba(0,185,174,0.35)',
-            }}
-          >
-            {purchasing ? 'Procesando...' : 'Obtener Premium'}
           </button>
 
           {/* Restore purchases */}
           <button
             onClick={handleRestore}
             disabled={restoring}
-            className="w-full mt-3 py-2.5 text-sm text-gray-400 hover:text-gray-200 transition-colors disabled:opacity-50"
+            className="w-full mt-1 py-2.5 text-sm text-gray-400 hover:text-gray-200 transition-colors disabled:opacity-50"
           >
             {restoring ? 'Restaurando...' : 'Restaurar compras anteriores'}
           </button>
+
+          {/* Privacy policy */}
+          <a
+            href="https://labappstudio.com/credicuotas#politicasdeprivacidad"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full block text-center py-2.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+          >
+            Políticas de privacidad
+          </a>
         </div>
       </div>
     </div>
