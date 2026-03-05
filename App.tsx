@@ -397,20 +397,21 @@ const MainMenu = ({
           <div className="mt-6 max-w-2xl mx-auto">
             <button
               onClick={onShowPaywall}
-              className="w-full py-3 px-5 rounded-2xl border border-[#00B9AE]/30 bg-[#00B9AE]/5 hover:bg-[#00B9AE]/10 transition-all duration-200 flex items-center justify-between gap-3"
+              className="w-full py-3 px-5 rounded-2xl border border-amber-400/40 bg-transparent hover:bg-amber-400/5 transition-all duration-200 flex items-center justify-between gap-3"
+              style={{ boxShadow: '0 0 12px rgba(245,158,11,0.15)' }}
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(0,185,174,0.15)' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#00B9AE" strokeWidth={2} className="w-4 h-4">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 3l14 9-14 9V3z" />
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'transparent', border: '2px solid #F59E0B', boxShadow: '0 0 8px rgba(245,158,11,0.4)' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4 text-amber-400">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-semibold text-white">Desbloquear Premium</p>
+                  <p className="text-sm font-semibold text-amber-400">Desbloquear Premium</p>
                   <p className="text-xs text-gray-400">Accede a todos los simuladores</p>
                 </div>
               </div>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#00B9AE" strokeWidth={2} className="w-4 h-4 flex-shrink-0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth={2} className="w-4 h-4 flex-shrink-0">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </button>
