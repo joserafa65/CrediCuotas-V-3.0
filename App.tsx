@@ -1,0 +1,1212 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import {
+  LoanDetails,
+  CalculationResults,
+  FrecuenciaAbono,
+  CreditType
+} from './types';
+import { calculateLoan } from './services/loanCalculator';
+import { generatePdf } from './services/pdfGenerator';
+import { generateExcel } from './services/excelGenerator';
+import {
+  ArrowLeftIcon,
+  PartyPopperIcon,
+  BuildingsIcon,
+  DownloadIcon,
+  TableCellsIcon,
+  CarIcon,
+  TractorIcon,
+  ShoppingCartIcon
+} from './components/icons';
+import { Onboarding } from './components/Onboarding';
+
+type Screen = 'menu' | 'simulator';
+
+const baseLoanDetails: Omit<
+  LoanDetails,
+  'valorPropiedad' | 'montoPrestamo' | 'plazoAnios' | 'tasaInteresAnual'
+> = {
+  hacerAbonoExtra: false,
+  montoAbonoExtra: 0,
+  frecuenciaAbonoExtra: 'Mensual',
+  tipoAbonoExtra: 'reducir_plazo',
+  incluirSeguroDesgravamen: false,
+  sumarGastosLegales: false,
+  porcentajeGastosLegales: 1.5,
+  financiarGastosLegales: false,
+  calcularSeguroVehicular: false,
+  porcentajeSeguroVehicular: 4,
+  sumarSeguroACuota: false
+};
+
+const creditTypeConfig: Record<
+  CreditType,
+  {
+    title: string;
+    Icon: React.ComponentType<{ className?: string }>;
+    propertyLabel: string;
+    defaultDetails: LoanDetails;
+  }
+> = {
+  hipotecario: {
+    title: 'Crédito Hipotecario',
+    Icon: BuildingsIcon,
+    propertyLabel: '¿Cuánto vale mi nueva propiedad?',
+    defaultDetails: {
+      ...baseLoanDetails,
+      valorPropiedad: 150000,
+      montoPrestamo: 120000,
+      plazoAnios: 20,
+      tasaInteresAnual: 9.5
+    }
+  },
+  vehicular: {
+    title: 'Crédito Vehicular',
+    Icon: CarIcon,
+    propertyLabel: '¿Cuánto vale el vehículo?',
+    defaultDetails: {
+      ...baseLoanDetails,
+      valorPropiedad: 25000,
+      montoPrestamo: 20000,
+      plazoAnios: 5,
+      tasaInteresAnual: 15.6,
+      porcentajeGastosLegales: 5
+    }
+  },
+  microcredito: {
+    title: 'Microcrédito',
+    Icon: TractorIcon,
+    propertyLabel: '¿Cuál es el valor del activo?',
+    defaultDetails: {
+      ...baseLoanDetails,
+      valorPropiedad: 10000,
+      montoPrestamo: 8000,
+      plazoAnios: 3,
+      tasaInteresAnual: 20.5
+    }
+  },
+  consumo: {
+    title: 'Crédito de Consumo',
+    Icon: ShoppingCartIcon,
+    propertyLabel: '¿Cuál es el monto del crédito?',
+    defaultDetails: {
+      ...baseLoanDetails,
+      valorPropiedad: 5000,
+      montoPrestamo: 5000,
+      plazoAnios: 2,
+      tasaInteresAnual: 15.8
+    }
+  }
+};
+
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('es-ES', {
+    style: 'decimal',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value);
+};
+const App = () => {
+  // 🔓 Estado PRO (por ahora siempre false, luego Apple lo activará)
+  const [isPro, setIsPro] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+  const [fadeOut, setFadeOut] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [screen, setScreen] = useState<Screen>('menu');
+  const [simulationToLoad, setSimulationToLoad] = useState<{
+    details: LoanDetails;
+    type: CreditType;
+  } | null>(null);
+
+  // Título que se pasa a ResultsDisplay
+  const title = 'crédito';
+
+  // Onboarding: solo la primera vez, usando clave _v2
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding_v2');
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, []);
+  // Splash de inicio (2 segundos)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFadeOut(true);
+      setTimeout(() => setShowSplash(false), 500);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleSplashClick = () => {
+    setFadeOut(true);
+    setTimeout(() => setShowSplash(false), 500);
+  };
+
+  const startSimulation = (type: CreditType) => {
+    setSimulationToLoad({
+      details: creditTypeConfig[type].defaultDetails,
+      type
+    });
+    setScreen('simulator');
+  };
+
+  const backToMenu = () => {
+    setSimulationToLoad(null);
+    setScreen('menu');
+  };
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('hasSeenOnboarding_v2', 'true');
+    setShowOnboarding(false);
+  };
+
+  // Splash screen
+  if (showSplash) {
+    return (
+      <div
+        onClick={handleSplashClick}
+        className={`fixed inset-0 w-full h-full flex items-center justify-center cursor-pointer z-50 ${
+          fadeOut ? 'splash-fadeOut' : 'splash-fadeIn'
+        }`}
+        style={{
+          touchAction: 'manipulation',
+          WebkitTapHighlightColor: 'transparent'
+        }}
+      >
+        <img
+          src="/logocredicuotaspantallainicio_02.webp"
+          alt="CrediCuotas"
+          className="w-full h-full object-cover"
+          style={{
+            maxWidth: '100%',
+            maxHeight: '100%'
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Onboarding (pantallas iniciales)
+  if (showOnboarding) {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
+
+  // App principal
+  return (
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-900 via-slate-900 to-gray-900 text-gray-100">
+      <header className="fixed top-0 left-0 w-full h-[80px] z-50 bg-transparent">
+        <div id="top-ad"></div>
+      </header>
+
+      <main className="flex-grow container mx-auto px-4 py-6 sm:px-6 sm:py-8 md:px-8 max-w-5xl pt-[80px] pb-[100px]">
+        {screen === 'menu' && <MainMenu onStart={startSimulation} />}
+        {screen === 'simulator' && simulationToLoad && (
+          <Simulator
+            onBack={backToMenu}
+            creditType={simulationToLoad.type}
+            initialDetails={simulationToLoad.details}
+          />
+        )}
+      </main>
+
+      <footer className="fixed bottom-0 left-0 w-full h-[100px] z-50 bg-transparent">
+        <div id="bottom-ad"></div>
+      </footer>
+    </div>
+  );
+};
+
+const MainMenu = ({ onStart }: { onStart: (type: CreditType) => void }) => {
+  // Mapeo de iconos personalizados según tipo de crédito
+  const customIcons: Record<CreditType, string> = {
+    hipotecario: "/icons/Hipotecario.svg",
+    vehicular: "/icons/Vehicular.svg",
+    microcredito: "/icons/Microcredito.svg",
+    consumo: "/icons/Consumo.svg"
+  };
+
+  return (
+    <div className="flex flex-col items-center text-center min-h-[calc(100vh-7rem)] sm:min-h-[calc(100vh-8rem)]">
+      <div className="pt-8 md:pt-12 w-full">
+        
+        {/* LOGO SUPERIOR */}
+        <div className="flex justify-center mb-3">
+          <img
+            src="/logo_credicuotas_baner_arriba_02.png"
+            alt="CrediCuotas"
+            className="h-14 sm:h-16 md:h-20 w-auto object-contain max-w-full px-4"
+          />
+        </div>
+
+        <p className="mt-3 text-base md:text-lg text-gray-400 font-light">
+          Simulador universal para tus créditos
+        </p>
+
+        {/* BOTONES DE CRÉDITO */}
+        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
+
+          {(Object.keys(creditTypeConfig) as CreditType[]).map((type) => {
+            const { title } = creditTypeConfig[type];
+            const iconPath = customIcons[type];
+
+            return (
+              <button
+                key={type}
+                onClick={() => onStart(type)}
+                className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 
+                           border-2 border-turquoise/30 rounded-2xl p-4 transition-all duration-300 
+                           hover:border-turquoise hover:shadow-2xl hover:shadow-turquoise/20 hover:-translate-y-1"
+              >
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-turquoise/0 to-turquoise/0 
+                                group-hover:from-turquoise/10 group-hover:to-turquoise/5 transition-all duration-300" />
+
+                {/* CONTENIDO */}
+                <div className="relative flex flex-col items-center gap-3">
+
+                  {/* ÍCONO PERSONALIZADO */}
+                  <div
+                    className="w-12 h-12 flex items-center justify-center rounded-full bg-turquoise/10 
+                               border-2 border-turquoise/30 overflow-hidden 
+                               group-hover:bg-turquoise/20 group-hover:border-turquoise 
+                               transition-all duration-300 group-active:scale-110"
+                  >
+                    <img
+                      src={iconPath}
+                      alt={title}
+                      className="w-7 h-7 object-contain select-none"
+                      draggable={false}
+                    />
+                  </div>
+
+                  {/* TÍTULO */}
+                  <span className="text-lg font-bold text-white group-hover:text-turquoise transition-colors duration-300">
+                    {title}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+
+        </div>
+      </div>
+
+      {/* DISCLAIMER INFERIOR */}
+      <div className="mt-auto pt-10 pb-4 w-full">
+        <div className="max-w-2xl mx-auto text-xs text-gray-500 text-center space-y-2 leading-relaxed">
+          <p>
+            Las tasas de interés y los resultados presentados en este simulador
+            son referenciales y aproximados, calculados con base en los rangos
+            establecidos por el Banco Central del Ecuador (BCE) para cada uno de los segmentos.
+          </p>
+          <p>
+            Los valores finales pueden variar según el perfil crediticio del solicitante,
+            políticas internas de cada institución financiera, y costos adicionales.
+          </p>
+          <p>
+            El resultado no constituye una oferta vinculante ni un compromiso de crédito.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+const Simulator = ({
+  onBack,
+  initialDetails,
+  creditType
+}: {
+  onBack: () => void;
+  initialDetails: Partial<LoanDetails>;
+  creditType: CreditType;
+}) => {
+  const config = creditTypeConfig[creditType];
+
+  const [details, setDetails] = useState<LoanDetails>({
+    ...baseLoanDetails,
+    ...config.defaultDetails,
+    ...initialDetails
+  });
+  const [results, setResults] = useState<CalculationResults | null>(null);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+
+  useEffect(() => {
+    setDetails({
+      ...baseLoanDetails,
+      ...config.defaultDetails,
+      ...initialDetails
+    });
+    setResults(null);
+  }, [initialDetails, creditType]);
+
+  const entrada = useMemo(
+    () => details.valorPropiedad - details.montoPrestamo,
+    [details.valorPropiedad, details.montoPrestamo]
+  );
+
+  const porcentajePrestamo = useMemo(
+    () =>
+      details.valorPropiedad > 0
+        ? (details.montoPrestamo / details.valorPropiedad) * 100
+        : 0,
+    [details.valorPropiedad, details.montoPrestamo]
+  );
+
+  const handleDetailChange = (field: keyof LoanDetails, value: any) => {
+    setDetails((prev) => ({ ...prev, [field]: value }));
+  };
+
+const handleValorPropiedadChange = (value: number) => {
+  // Para crédito de consumo, valorPropiedad y montoPrestamo son siempre iguales
+  if (creditType === 'consumo') {
+    setDetails((prev) => ({
+      ...prev,
+      valorPropiedad: value,
+      montoPrestamo: value
+    }));
+    return;
+  }
+
+  // Para otros tipos de crédito, mantener el cálculo con porcentaje
+  const newMontoPrestamo = value * (porcentajePrestamo / 100);
+  setDetails((prev) => ({
+    ...prev,
+    valorPropiedad: value,
+    montoPrestamo: Math.max(0, newMontoPrestamo)
+  }));
+};
+
+const handleMontoPrestamoChange = (value: number) => {
+  setDetails((prev) => ({
+    ...prev,
+    montoPrestamo: Math.max(0, value)
+  }));
+};
+
+  const handleEntradaChange = (value: number) => {
+    const newMontoPrestamo = details.valorPropiedad - value;
+    setDetails((prev) => ({
+      ...prev,
+      montoPrestamo: Math.max(0, newMontoPrestamo)
+    }));
+  };
+
+  const handlePorcentajeChange = (newPercentage: number) => {
+    const calculatedAmount = details.valorPropiedad * (newPercentage / 100);
+    setDetails((prev) => ({ ...prev, montoPrestamo: calculatedAmount }));
+  };
+
+  const handleCalculate = () => {
+    const calculatedResults = calculateLoan(details);
+    setResults(calculatedResults);
+  };
+
+  return (
+    <div>
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 bg-turquoise/90 text-white font-medium px-5 py-2.5 rounded-full hover:bg-turquoise transition-colors mb-6 shadow-md"
+      >
+        <ArrowLeftIcon className="w-4 h-4" />
+        Volver al menú
+      </button>
+
+<header className="flex justify-between items-start mb-6">
+  <div>
+    <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+      Simulador de {config.title}
+    </h2>
+    <p className="text-gray-300 mt-2 text-sm md:text-base font-light">
+      Ingresa los datos para simular tu crédito.
+    </p>
+    <p className="text-xs text-gray-500 mt-2.5 italic max-w-md leading-relaxed">
+      Los resultados obtenidos son un ejercicio estimativo y pueden variar
+      según la entidad financiera, el perfil del solicitante, y las
+      condiciones específicas del crédito.
+    </p>
+  </div>
+</header>
+
+      <div className="bg-slate-800/40 border border-slate-700/60 p-5 md:p-7 rounded-2xl shadow-lg">
+        <div className="space-y-5 mb-7">
+          <div>
+            <label className="block font-semibold text-white text-sm mb-2">
+              {config.propertyLabel}
+            </label>
+            <input
+              type="text"
+              value={`$ ${formatCurrency(details.valorPropiedad)}`}
+              onChange={(e) =>
+                handleValorPropiedadChange(
+                  Number(e.target.value.replace(/[^0-9]/g, ''))
+                )
+              }
+              className="w-full p-3 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise font-semibold text-white transition-all"
+            />
+          </div>
+
+          {creditType !== 'consumo' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block font-semibold text-white text-sm mb-2">
+                  ¿Cuánto necesito?
+                </label>
+                <input
+                  type="text"
+                  value={`$ ${formatCurrency(details.montoPrestamo)}`}
+                  onChange={(e) =>
+                    handleMontoPrestamoChange(
+                      Number(e.target.value.replace(/[^0-9]/g, ''))
+                    )
+                  }
+                  className="w-full p-3 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise font-semibold text-white transition-all"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-white text-sm mb-2">
+                  ¿De cuánto es mi entrada?
+                </label>
+                <input
+                  type="text"
+                  value={`$ ${formatCurrency(entrada)}`}
+                  onChange={(e) =>
+                    handleEntradaChange(
+                      Number(e.target.value.replace(/[^0-9]/g, ''))
+                    )
+                  }
+                  className="w-full p-3 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise font-semibold text-white transition-all"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {creditType !== 'consumo' && (
+          <div className="mb-7">
+            <label className="font-semibold text-white text-sm flex justify-between items-center mb-3">
+              <span>¿Qué % de préstamo necesito?</span>
+              <span className="text-lg font-bold text-turquoise bg-slate-700/50 px-3 py-1.5 rounded-lg">
+                {porcentajePrestamo.toFixed(0)}%
+              </span>
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="100"
+              step="1"
+              value={porcentajePrestamo}
+              onChange={(e) => handlePorcentajeChange(Number(e.target.value))}
+              className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-turquoise"
+            />
+          </div>
+        )}
+
+        <div className="grid md:grid-cols-2 gap-5 mb-2">
+          <div>
+            <label
+              htmlFor="plazo"
+              className="block font-semibold text-white text-sm mb-2"
+            >
+              ¿En cuánto tiempo deseo pagar?
+            </label>
+            <select
+              id="plazo"
+              value={details.plazoAnios}
+              onChange={(e) =>
+                handleDetailChange('plazoAnios', Number(e.target.value))
+              }
+              className="w-full p-3 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise text-white transition-all"
+            >
+              {Array.from(
+                { length: creditType === 'hipotecario' ? 28 : 8 },
+                (_, i) => i + (creditType === 'hipotecario' ? 3 : 1)
+              ).map((y) => (
+                <option key={y} value={y}>
+                  {y} años
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label
+              htmlFor="tasa"
+              className="block font-semibold text-white text-sm mb-2"
+            >
+              Tasa Nominal Anual (TNA)
+            </label>
+            <input
+              id="tasa"
+              type="number"
+              step="0.1"
+              value={details.tasaInteresAnual}
+              onChange={(e) =>
+                handleDetailChange(
+                  'tasaInteresAnual',
+                  Number(e.target.value)
+                )
+              }
+              className="w-full p-3 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise text-white transition-all"
+            />
+          </div>
+        </div>
+
+        <p className="text-sm text-gray-400 text-center mb-7 leading-relaxed">
+          Este % es referencial. Puedes cambiarla si la entidad te ha
+          proporcionado una Tasa Nominal Anual (TNA).
+        </p>
+
+        <button
+          onClick={() =>
+            setShowAdvancedOptions((prevShow) => !prevShow)
+          }
+          className="w-full mb-7 py-3 bg-slate-700/80 text-white font-medium rounded-xl hover:bg-slate-600 transition-all flex items-center justify-center gap-2 shadow-sm"
+        >
+          {showAdvancedOptions
+            ? '▼ Ocultar opciones avanzadas'
+            : '▶ Más opciones'}
+        </button>
+
+        {showAdvancedOptions && (
+          <>
+            <div className="mb-5">
+              <p className="font-semibold text-white text-sm mb-2.5">
+                ¿Deseas que sumemos seguro de desgravamen?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() =>
+                    handleDetailChange('incluirSeguroDesgravamen', true)
+                  }
+                  className={`px-5 py-2 rounded-lg transition-all text-sm ${
+                    details.incluirSeguroDesgravamen
+                      ? 'bg-turquoise text-white'
+                      : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                  }`}
+                >
+                  Sí
+                </button>
+                <button
+                  onClick={() =>
+                    handleDetailChange('incluirSeguroDesgravamen', false)
+                  }
+                  className={`px-5 py-2 rounded-lg transition-all text-sm ${
+                    !details.incluirSeguroDesgravamen
+                      ? 'bg-turquoise text-white'
+                      : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+              {details.incluirSeguroDesgravamen && (
+                <p className="text-xs text-gray-400 mt-2 px-1 leading-relaxed">
+                  Se sumará un 0,04% del monto del préstamo a cada cuota
+                  mensual.
+                </p>
+              )}
+            </div>
+
+            {creditType === 'vehicular' && (
+              <div className="mb-5">
+                <p className="font-semibold text-white text-sm mb-2.5">
+                  ¿Deseas tener un estimado de cuánto costará el seguro para tu
+                  vehículo?
+                </p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() =>
+                        handleDetailChange('calcularSeguroVehicular', true)
+                      }
+                      className={`px-5 py-2 rounded-lg transition-all text-sm ${
+                        details.calcularSeguroVehicular
+                          ? 'bg-turquoise text-white'
+                          : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                      }`}
+                    >
+                      Sí
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleDetailChange('calcularSeguroVehicular', false)
+                      }
+                      className={`px-5 py-2 rounded-lg transition-all text-sm ${
+                        !details.calcularSeguroVehicular
+                          ? 'bg-turquoise text-white'
+                          : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                      }`}
+                    >
+                      No
+                    </button>
+                  </div>
+                  {details.calcularSeguroVehicular && (
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={details.porcentajeSeguroVehicular}
+                        onChange={(e) =>
+                          handleDetailChange(
+                            'porcentajeSeguroVehicular',
+                            Number(e.target.value)
+                          )
+                        }
+                        className="w-24 p-2 pr-6 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise text-center font-semibold text-sm text-white"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        %
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {details.calcularSeguroVehicular && (
+                  <>
+                    <p className="text-xs text-gray-400 mt-2 px-1 leading-relaxed">
+                      Este cálculo es referencial entre el 3% y el 7% según el
+                      valor de tu vehículo y tu perfil personal.
+                    </p>
+                    <div className="mt-3 flex items-center gap-3 bg-slate-900/50 p-2.5 rounded-lg border border-slate-700/50">
+                      <input
+                        type="checkbox"
+                        id="sumar-seguro-cuota"
+                        checked={details.sumarSeguroACuota}
+                        onChange={(e) =>
+                          handleDetailChange(
+                            'sumarSeguroACuota',
+                            e.target.checked
+                          )
+                        }
+                        className="h-5 w-5 rounded border-gray-500 bg-gray-700 text-turquoise focus:ring-turquoise focus:ring-offset-slate-800"
+                      />
+                      <label
+                        htmlFor="sumar-seguro-cuota"
+                        className="text-sm font-medium text-gray-200 cursor-pointer select-none"
+                      >
+                        ¿Deseas sumar el seguro a la cuota mensual?
+                      </label>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div className="mb-5">
+              <p className="font-semibold text-white text-sm mb-2.5">
+                {creditType === 'vehicular'
+                  ? '¿Deseas sumar un valor extra por trámites legales, impuestos o matriculación?'
+                  : '¿Deseas sumar un valor extra por tramites legales o impuestos especiales?'}
+              </p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() =>
+                      handleDetailChange('sumarGastosLegales', true)
+                    }
+                    className={`px-5 py-2 rounded-lg transition-all text-sm ${
+                      details.sumarGastosLegales
+                        ? 'bg-turquoise text-white'
+                        : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                    }`}
+                  >
+                    Sí
+                  </button>
+                  <button
+                    onClick={() =>
+                      handleDetailChange('sumarGastosLegales', false)
+                    }
+                    className={`px-5 py-2 rounded-lg transition-all text-sm ${
+                      !details.sumarGastosLegales
+                        ? 'bg-turquoise text-white'
+                        : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
+                {details.sumarGastosLegales && (
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={details.porcentajeGastosLegales}
+                      onChange={(e) =>
+                        handleDetailChange(
+                          'porcentajeGastosLegales',
+                          Number(e.target.value)
+                        )
+                      }
+                      className="w-28 p-2 pr-6 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise text-center font-semibold"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      %
+                    </span>
+                  </div>
+                )}
+              </div>
+              {details.sumarGastosLegales && (
+                <p className="text-xs text-gray-400 mt-2 px-1 leading-relaxed">
+                  {creditType === 'vehicular'
+                    ? 'Recomendado: 5%. Se calculará este porcentaje del monto del préstamo como un valor por gastos por ejemplo la matriculación. Este valor es un pago único que se suma al total que terminas pagando.'
+                    : `Recomendado: 1.5%. Se calculará este porcentaje del monto del préstamo como un valor por gastos.${
+                        details.financiarGastosLegales
+                          ? ' Este valor se sumará al capital del préstamo y afectará tus cuotas.'
+                          : ' Este valor es un pago único que se suma al total que terminas pagando.'
+                      }`}
+                </p>
+              )}
+              {details.sumarGastosLegales && (
+                <div className="mt-3 flex items-center gap-3 bg-slate-900/50 p-2.5 rounded-lg border border-slate-700/50">
+                  <input
+                    type="checkbox"
+                    id="financiar-gastos"
+                    checked={details.financiarGastosLegales}
+                    onChange={(e) =>
+                      handleDetailChange(
+                        'financiarGastosLegales',
+                        e.target.checked
+                      )
+                    }
+                    className="h-5 w-5 rounded border-gray-500 bg-gray-700 text-turquoise focus:ring-turquoise focus:ring-offset-slate-800"
+                  />
+                  <label
+                    htmlFor="financiar-gastos"
+                    className="text-sm font-medium text-gray-200 cursor-pointer select-none"
+                  >
+                    ¿Deseas sumar el valor al préstamo?
+                  </label>
+                </div>
+              )}
+            </div>
+
+            <div className="mb-5">
+              <p className="font-semibold text-white text-sm mb-2.5">
+                ¿Deseas hacer abonos extras?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() =>
+                    handleDetailChange('hacerAbonoExtra', true)
+                  }
+                  className={`px-5 py-2 rounded-lg transition-all text-sm ${
+                    details.hacerAbonoExtra
+                      ? 'bg-turquoise text-white'
+                      : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                  }`}
+                >
+                  Sí
+                </button>
+                <button
+                  onClick={() =>
+                    handleDetailChange('hacerAbonoExtra', false)
+                  }
+                  className={`px-5 py-2 rounded-lg transition-all text-sm ${
+                    !details.hacerAbonoExtra
+                      ? 'bg-turquoise text-white'
+                      : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+              {details.hacerAbonoExtra && (
+                <div className="space-y-4 mt-3 p-4 md:p-5 bg-slate-900/50 border border-slate-700/50 rounded-lg">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-semibold text-sm text-gray-200 mb-2">
+                        Monto del abono
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="0"
+                        value={
+                          details.montoAbonoExtra > 0
+                            ? details.montoAbonoExtra
+                            : ''
+                        }
+                        onChange={(e) =>
+                          handleDetailChange(
+                            'montoAbonoExtra',
+                            Number(
+                              e.target.value.replace(/[^0-9]/g, '')
+                            )
+                          )
+                        }
+                        className="w-full p-2.5 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise text-white text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-sm text-gray-200 mb-2">
+                        Frecuencia
+                      </label>
+                      <select
+                        value={details.frecuenciaAbonoExtra}
+                        onChange={(e) =>
+                          handleDetailChange(
+                            'frecuenciaAbonoExtra',
+                            e.target.value as FrecuenciaAbono
+                          )
+                        }
+                        className="w-full p-2.5 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise text-white text-sm"
+                      >
+                        {(
+                          [
+                            'Una vez',
+                            'Mensual',
+                            'Trimestral',
+                            'Semestral',
+                            'Anual'
+                          ] as FrecuenciaAbono[]
+                        ).map((f) => (
+                          <option key={f} value={f}>
+                            {f}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-gray-200 mb-2.5">
+                      Aplicar abono para:
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() =>
+                          handleDetailChange(
+                            'tipoAbonoExtra',
+                            'reducir_plazo'
+                          )
+                        }
+                        className={`px-4 py-2 rounded-lg text-sm transition-all ${
+                          details.tipoAbonoExtra === 'reducir_plazo'
+                            ? 'bg-turquoise text-white'
+                            : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                        }`}
+                      >
+                        Reducir Plazo
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleDetailChange(
+                            'tipoAbonoExtra',
+                            'reducir_cuota'
+                          )
+                        }
+                        className={`px-4 py-2 rounded-lg text-sm transition-all ${
+                          details.tipoAbonoExtra === 'reducir_cuota'
+                            ? 'bg-turquoise text-white'
+                            : 'bg-gray-700/80 text-white hover:bg-gray-600'
+                        }`}
+                      >
+                        Reducir Cuota
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        <button
+          onClick={handleCalculate}
+          className="w-full mt-4 py-4 bg-turquoise text-white font-semibold text-lg rounded-xl shadow-lg shadow-turquoise/30 hover:bg-opacity-90 transform hover:scale-[1.02] transition-all duration-200"
+        >
+          Calcular Préstamo
+        </button>
+      </div>
+
+      {results && (
+        <div className="mt-10">
+        <ResultsDisplay
+  results={results}
+  details={details}
+  title={'crédito'}
+  isPro={false}
+/>
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface ResultsProps {
+  results: CalculationResults;
+  details: LoanDetails;
+  title: string;
+}
+
+const ResultsDisplay = ({
+  results,
+  details,
+  title,
+  isPro,
+}: ResultsProps & { isPro: boolean }) => {
+  const [showTable, setShowTable] = useState(false);
+
+  const tableData =
+    results.nuevaTablaAmortizacion || results.tablaAmortizacion;
+
+const handleExportPdf = () => {
+  if (!isPro) {
+    alert('Esta función está disponible solo en la versión PRO');
+    return;
+  }
+
+  generatePdf(results, details, title);
+};
+
+const handleExportExcel = () => {
+  if (!isPro) {
+    alert('Esta función está disponible solo en la versión PRO');
+    return;
+  }
+
+  generateExcel(results, details, title);
+};
+
+  const savingsMessage = (
+    <div className="bg-green-900/50 text-green-300 p-4 rounded-lg text-center font-medium border border-green-700/50">
+      ¡Muy bien! Con tu cuota extraordinaria ahorras{' '}
+      <strong>${formatCurrency(results.ahorroTotal ?? 0)}</strong>
+      {results.mesesAhorrados && results.mesesAhorrados > 0 ? (
+        <>
+          {' '}
+          y pagarás tu préstamo{' '}
+          <strong>
+            {results.mesesAhorrados}{' '}
+            {results.mesesAhorrados === 1 ? 'mes' : 'meses'}
+          </strong>{' '}
+          más rápido.
+        </>
+      ) : (
+        '. Tu nueva cuota más baja se reflejará en la tabla de amortización.'
+      )}
+    </div>
+  );
+
+  return (
+    <div className="animate-fade-in">
+      <header className="mb-6">
+        <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+          Resumen de tu {title}
+        </h2>
+        <p className="text-gray-300 mt-2 text-sm md:text-base font-light">
+          Estos son los resultados de tu simulación.
+        </p>
+      </header>
+
+      <div className="bg-slate-800/40 border border-slate-700/60 p-5 md:p-7 rounded-2xl shadow-lg">
+        <div className="text-center mb-7">
+          <p className="text-gray-200 text-sm font-light mb-2">
+            {results.nuevaCuotaMensual
+              ? 'Tu cuota mensual inicial es de:'
+              : 'Tu cuota mensual es de:'}
+          </p>
+          <p className="text-4xl md:text-5xl font-bold text-white tracking-tight">
+            ${formatCurrency(results.cuotaMensual)}
+          </p>
+
+          {results.nuevaCuotaMensual && (
+            <>
+              <p className="text-gray-200 mt-6 text-sm font-light mb-2">
+                Tu nueva cuota mensual será de:
+              </p>
+              <p className="text-3xl md:text-4xl font-bold text-turquoise">
+                ${formatCurrency(results.nuevaCuotaMensual)}
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="bg-slate-700/40 rounded-xl p-5 mb-7">
+          <h3 className="text-base font-semibold text-turquoise mb-4 text-center tracking-wide">
+            Detalle del Crédito
+          </h3>
+
+          <div className="space-y-2.5">
+            <div className="flex justify-between items-center py-2.5 border-b border-slate-600/50">
+              <span className="text-gray-300 text-sm">Valor del Bien</span>
+              <span className="text-white font-semibold text-sm">
+                ${formatCurrency(details.valorPropiedad)}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center py-2.5 border-b border-slate-600/50">
+              <span className="text-gray-300 text-sm">Tu Entrada</span>
+              <span className="text-white font-semibold text-sm">
+                $
+                {formatCurrency(
+                  details.valorPropiedad - details.montoPrestamo
+                )}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center py-2.5 border-b border-slate-600/50">
+              <span className="text-gray-300 text-sm">Monto Solicitado</span>
+              <span className="text-white font-semibold text-sm">
+                ${formatCurrency(details.montoPrestamo)}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center py-2.5 border-b border-slate-600/50">
+              <span className="text-gray-300 text-sm">Monto de Intereses</span>
+              <span className="text-white font-semibold text-sm">
+                ${formatCurrency(results.totalInteres)}
+              </span>
+            </div>
+
+            {results.gastosLegales && results.gastosLegales > 0 && (
+              <div className="flex justify-between items-center py-2.5 border-b border-slate-600/50">
+                <span className="text-gray-300 text-sm">
+                  Gastos Legales / Impuestos
+                </span>
+                <span className="text-white font-semibold text-sm">
+                  ${formatCurrency(results.gastosLegales)}
+                </span>
+              </div>
+            )}
+
+            {results.seguroVehicular && results.seguroVehicular > 0 && (
+              <>
+                <div className="flex justify-between items-center py-2.5 border-b border-slate-600/50">
+                  <span className="text-gray-300 text-sm">
+                    Seguro Vehicular (Anual)
+                  </span>
+                  <span className="text-white font-semibold text-sm">
+                    ${formatCurrency(results.seguroVehicular)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2.5 border-b border-slate-600/50">
+                  <span className="text-gray-300 text-sm">
+                    Seguro Vehicular (Mensual)
+                    {details.sumarSeguroACuota
+                      ? ' - incluido en cuota'
+                      : ''}
+                  </span>
+                  <span className="text-white font-semibold text-sm">
+                    ${formatCurrency(results.seguroVehicular / 12)}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="text-center mb-7 bg-gradient-to-r from-turquoise/20 to-blue-500/20 rounded-xl p-5 border border-turquoise/30">
+          <p className="text-sm text-gray-200 mb-2 font-light">
+            Terminas Pagando un Total de
+          </p>
+          <p className="text-3xl md:text-4xl font-bold text-turquoise">
+            ${formatCurrency(results.terminasPagando)}
+          </p>
+        </div>
+
+        {results.ahorroTotal && results.ahorroTotal > 0 && (
+          <div className="mb-7">{savingsMessage}</div>
+        )}
+
+        <div className="pt-4 space-y-3.5">
+          <button
+            onClick={() => setShowTable((prev) => !prev)}
+            className="w-full py-3 bg-slate-700/80 text-white font-medium rounded-xl hover:bg-slate-600 transition-all shadow-sm"
+          >
+            {showTable ? 'Ocultar' : 'Ver'} Tabla de Amortización
+          </button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <button
+              onClick={handleExportPdf}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-transparent border-2 text-[#27b9ab] font-medium rounded-xl hover:text-white transition-all shadow-sm"
+              style={{ borderColor: '#27b9ab' }}
+            >
+              <DownloadIcon className="w-5 h-5" />
+              Exportar a PDF
+            </button>
+
+            <button
+              onClick={handleExportExcel}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-transparent border-2 border-green-500 text-green-500 font-medium rounded-xl hover:bg-green-500 hover:text-white transition-all shadow-sm"
+            >
+              <TableCellsIcon className="w-5 h-5" />
+              Exportar a Excel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {showTable && (
+        <div className="bg-slate-800/40 border border-slate-700/60 p-4 md:p-6 rounded-2xl shadow-lg mt-7">
+          <h3 className="text-xl font-bold text-white tracking-tight mb-4">
+            Tabla de Amortización
+          </h3>
+
+          <div className="overflow-auto max-h-[60vh] rounded-lg border border-slate-700">
+            <table className="w-full text-sm text-left whitespace-nowrap">
+              <thead className="text-xs text-gray-300 uppercase bg-slate-700 sticky top-0 z-10">
+                <tr>
+                  <th className="px-3 py-3 font-semibold">Mes</th>
+                  <th className="px-3 py-3 font-semibold">Cuota</th>
+                  <th className="px-3 py-3 font-semibold">Capital</th>
+                  <th className="px-3 py-3 font-semibold">Interés</th>
+                  {details.hacerAbonoExtra &&
+                    tableData.some((r) => r.abonoExtra > 0) && (
+                      <th className="px-3 py-3 font-semibold">
+                        Abono Extra
+                      </th>
+                    )}
+                  <th className="px-3 py-3 font-semibold text-right">
+                    Saldo
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody className="bg-slate-800">
+                {tableData.map((row) => (
+                  <tr
+                    key={row.periodo}
+                    className="border-b border-slate-700 last:border-b-0"
+                  >
+                    <td className="px-3 py-2 font-medium text-gray-200">
+                      {row.periodo}
+                    </td>
+                    <td className="px-3 py-2">
+                      ${formatCurrency(row.cuota)}
+                    </td>
+                    <td className="px-3 py-2 text-green-400">
+                      ${formatCurrency(row.capital)}
+                    </td>
+                    <td className="px-3 py-2 text-red-400">
+                      ${formatCurrency(row.interes)}
+                    </td>
+                    {details.hacerAbonoExtra &&
+                      tableData.some((r) => r.abonoExtra > 0) && (
+                        <td className="px-3 py-2">
+                          ${formatCurrency(row.abonoExtra)}
+                        </td>
+                      )}
+                    <td className="px-3 py-2 text-right font-semibold text-gray-200">
+                      ${formatCurrency(row.saldoRestante)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-6 text-center text-lg font-bold text-green-400 flex items-center justify-center gap-3">
+            <PartyPopperIcon className="w-7 h-7" />
+            <span>¡FELICIDADES. TERMINASTE DE PAGAR TU CRÉDITO!</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+export default App;
+
+
+

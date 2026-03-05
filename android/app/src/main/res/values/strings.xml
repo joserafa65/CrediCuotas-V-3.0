@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CrediCuotas</string>
+    <string name="title_activity_main">CrediCuotas</string>
+    <string name="package_name">com.credicuotas.app</string>
+    <string name="custom_url_scheme">com.credicuotas.app</string>
+</resources>

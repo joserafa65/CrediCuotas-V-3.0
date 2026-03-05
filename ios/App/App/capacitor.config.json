@@ -1,0 +1,9 @@
+{
+	"appId": "com.credicuotas.app",
+	"appName": "CrediCuotas",
+	"webDir": "dist",
+	"packageClassList": [
+		"FilesystemPlugin",
+		"SharePlugin"
+	]
+}
