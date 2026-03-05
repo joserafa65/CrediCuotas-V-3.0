@@ -149,10 +149,6 @@ const App = () => {
   };
 
   const startSimulation = (type: CreditType) => {
-    if (PREMIUM_CREDIT_TYPES.includes(type) && !isPremium) {
-      setShowPaywall(true);
-      return;
-    }
     setSimulationToLoad({
       details: creditTypeConfig[type].defaultDetails,
       type
@@ -1031,18 +1027,10 @@ const ResultsDisplay = ({
     results.nuevaTablaAmortizacion || results.tablaAmortizacion;
 
   const handleExportPdf = () => {
-    if (!isPro) {
-      onShowPaywall();
-      return;
-    }
     generatePdf(results, details, title);
   };
 
   const handleExportExcel = () => {
-    if (!isPro) {
-      onShowPaywall();
-      return;
-    }
     generateExcel(results, details, title);
   };
 
