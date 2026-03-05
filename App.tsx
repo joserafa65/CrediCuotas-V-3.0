@@ -111,6 +111,60 @@ const formatCurrency = (value: number) => {
 };
 const PREMIUM_CREDIT_TYPES: CreditType[] = ['hipotecario', 'vehicular', 'microcredito'];
 
+const NumericInput = ({
+  value,
+  onChange,
+  className,
+  placeholder,
+  id,
+  allowDecimal = false,
+}: {
+  value: number;
+  onChange: (val: number) => void;
+  className?: string;
+  placeholder?: string;
+  id?: string;
+  allowDecimal?: boolean;
+}) => {
+  const [localValue, setLocalValue] = React.useState(value === 0 ? '' : String(value));
+  const [focused, setFocused] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!focused) {
+      setLocalValue(value === 0 ? '' : String(value));
+    }
+  }, [value, focused]);
+
+  return (
+    <input
+      id={id}
+      type="text"
+      inputMode={allowDecimal ? 'decimal' : 'numeric'}
+      placeholder={placeholder ?? '0'}
+      value={focused ? localValue : (value === 0 ? '' : String(value))}
+      onFocus={() => {
+        setFocused(true);
+        setLocalValue(value === 0 ? '' : String(value));
+      }}
+      onChange={(e) => {
+        const pattern = allowDecimal ? /[^0-9.]/g : /[^0-9]/g;
+        const raw = e.target.value.replace(pattern, '');
+        setLocalValue(raw);
+        const num = parseFloat(raw);
+        onChange(isNaN(num) ? 0 : num);
+      }}
+      onBlur={() => {
+        setFocused(false);
+        const num = parseFloat(localValue);
+        const clean = isNaN(num) ? 0 : num;
+        setLocalValue(clean === 0 ? '' : String(clean));
+        onChange(clean);
+      }}
+      className={className}
+    />
+  );
+};
+
 const App = () => {
   const { isPremium } = usePurchase();
   const [showPaywall, setShowPaywall] = useState(false);
@@ -611,17 +665,11 @@ const handleMontoPrestamoChange = (value: number) => {
             >
               Tasa Nominal Anual (TNA)
             </label>
-            <input
+            <NumericInput
               id="tasa"
-              type="number"
-              step="0.1"
               value={details.tasaInteresAnual}
-              onChange={(e) =>
-                handleDetailChange(
-                  'tasaInteresAnual',
-                  Number(e.target.value)
-                )
-              }
+              onChange={(val) => handleDetailChange('tasaInteresAnual', val)}
+              allowDecimal={true}
               className="w-full p-3 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise text-white transition-all"
             />
           </div>
@@ -718,16 +766,10 @@ const handleMontoPrestamoChange = (value: number) => {
                   </div>
                   {details.calcularSeguroVehicular && (
                     <div className="relative">
-                      <input
-                        type="number"
-                        step="0.1"
+                      <NumericInput
                         value={details.porcentajeSeguroVehicular}
-                        onChange={(e) =>
-                          handleDetailChange(
-                            'porcentajeSeguroVehicular',
-                            Number(e.target.value)
-                          )
-                        }
+                        onChange={(val) => handleDetailChange('porcentajeSeguroVehicular', val)}
+                        allowDecimal={true}
                         className="w-24 p-2 pr-6 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise text-center font-semibold text-sm text-white"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -802,17 +844,11 @@ const handleMontoPrestamoChange = (value: number) => {
                 </div>
                 {details.sumarGastosLegales && (
                   <div className="relative">
-                    <input
-                      type="number"
-                      step="0.1"
+                    <NumericInput
                       value={details.porcentajeGastosLegales}
-                      onChange={(e) =>
-                        handleDetailChange(
-                          'porcentajeGastosLegales',
-                          Number(e.target.value)
-                        )
-                      }
-                      className="w-28 p-2 pr-6 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise text-center font-semibold"
+                      onChange={(val) => handleDetailChange('porcentajeGastosLegales', val)}
+                      allowDecimal={true}
+                      className="w-28 p-2 pr-6 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise text-center font-semibold text-white"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                       %
@@ -892,23 +928,10 @@ const handleMontoPrestamoChange = (value: number) => {
                       <label className="block font-semibold text-sm text-gray-200 mb-2">
                         Monto del abono
                       </label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
+                      <NumericInput
+                        value={details.montoAbonoExtra}
+                        onChange={(val) => handleDetailChange('montoAbonoExtra', val)}
                         placeholder="0"
-                        value={
-                          details.montoAbonoExtra > 0
-                            ? details.montoAbonoExtra
-                            : ''
-                        }
-                        onChange={(e) =>
-                          handleDetailChange(
-                            'montoAbonoExtra',
-                            Number(
-                              e.target.value.replace(/[^0-9]/g, '')
-                            )
-                          )
-                        }
                         className="w-full p-2.5 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise text-white text-sm"
                       />
                     </div>
