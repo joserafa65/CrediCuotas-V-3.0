@@ -36,6 +36,7 @@ export const PaywallModal = ({ onClose }: PaywallModalProps) => {
     'Simulador Hipotecario',
     'Simulador Vehicular',
     'Simulador Microcrédito',
+    'Simula cuotas extraordinarias',
     'Exportar a PDF',
     'Exportar a Excel',
     'Tabla de amortización completa',
@@ -96,6 +97,16 @@ export const PaywallModal = ({ onClose }: PaywallModalProps) => {
             </p>
           </div>
 
+          {/* Price highlight */}
+          <div className="mb-3 py-3 px-4 rounded-2xl text-center" style={{ background: 'linear-gradient(135deg, rgba(0,185,174,0.15), rgba(0,185,174,0.05))', border: '1.5px solid rgba(0,185,174,0.4)' }}>
+            <p className="text-lg font-bold text-white tracking-tight">
+              Desbloquear todo por <span style={{ color: '#00B9AE' }}>$5.99</span>
+            </p>
+            <p className="mt-0.5 text-xs font-semibold tracking-wide uppercase" style={{ color: '#F59E0B' }}>
+              Pago único · Sin suscripciones
+            </p>
+          </div>
+
           {/* CTA button */}
           <button
             onClick={handlePurchase}
@@ -117,10 +128,6 @@ export const PaywallModal = ({ onClose }: PaywallModalProps) => {
           >
             {restoring ? 'Restaurando...' : 'Restaurar compras anteriores'}
           </button>
-
-          <p className="mt-2 text-xs text-gray-600 text-center">
-            Pago único · Sin suscripciones
-          </p>
         </div>
       </div>
     </div>
