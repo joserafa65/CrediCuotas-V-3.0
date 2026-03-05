@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
+          '@revenuecat/purchases-capacitor': path.resolve(__dirname, 'mocks/purchases-capacitor.ts'),
         }
       }
     };
