@@ -333,7 +333,7 @@ const MainMenu = ({
                   </span>
 
                   {locked && (
-                    <span className="text-xs text-gray-500 font-medium -mt-1">Solo Premium</span>
+                    <span className="text-xs text-gray-500 font-medium -mt-1">Simulador avanzado<br />Disponible en Premium</span>
                   )}
                 </div>
               </button>
