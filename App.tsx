@@ -501,13 +501,29 @@ const Simulator = ({
     [details.valorPropiedad, details.montoPrestamo]
   );
 
-  const porcentajePrestamo = useMemo(
+  const porcentajeEntradaDisplay = useMemo(
     () =>
       details.valorPropiedad > 0
-        ? (details.montoPrestamo / details.valorPropiedad) * 100
+        ? (entrada / details.valorPropiedad) * 100
         : 0,
-    [details.valorPropiedad, details.montoPrestamo]
+    [entrada, details.valorPropiedad]
   );
+
+  const minEntradaWarning = useMemo(() => {
+    if (creditType === 'hipotecario' && details.valorPropiedad > 0) {
+      const pct = (entrada / details.valorPropiedad) * 100;
+      if (pct < 20) return 'Los bancos suelen requerir una entrada mínima de 20% para este tipo de crédito.';
+    }
+    if (creditType === 'vehicular' && details.valorPropiedad > 0) {
+      const pct = (entrada / details.valorPropiedad) * 100;
+      if (pct < 15) return 'Los bancos suelen requerir una entrada mínima de 15% para este tipo de crédito.';
+    }
+    if (creditType === 'microcredito' && details.valorPropiedad > 0) {
+      const pct = (entrada / details.valorPropiedad) * 100;
+      if (pct < 10) return 'Muchos microcréditos solicitan una garantía o respaldo cercano al 10% del monto solicitado.';
+    }
+    return null;
+  }, [creditType, entrada, details.valorPropiedad]);
 
   const handleDetailChange = (field: keyof LoanDetails, value: any) => {
     setDetails((prev) => ({ ...prev, [field]: value }));
@@ -597,7 +613,7 @@ const Simulator = ({
             <>
               <div>
                 <label className="block font-semibold text-white text-sm mb-2">
-                  ¿De cuánto es la entrada?
+                  {creditType === 'microcredito' ? '¿De cuánto es la garantía?' : '¿De cuánto es la entrada?'}
                 </label>
                 <input
                   type="text"
@@ -609,6 +625,12 @@ const Simulator = ({
                   }
                   className="w-full p-3 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise font-semibold text-white transition-all"
                 />
+                {minEntradaWarning && (
+                  <p className="text-xs text-amber-400 mt-1.5 flex items-start gap-1">
+                    <span>⚠️</span>
+                    <span>{minEntradaWarning}</span>
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -625,12 +647,12 @@ const Simulator = ({
                 </div>
                 <div>
                   <label className="block font-semibold text-white text-sm mb-2">
-                    % del valor en préstamo
+                    {creditType === 'microcredito' ? '% de garantía' : '% de entrada'}
                   </label>
                   <input
                     type="text"
                     readOnly
-                    value={`${porcentajePrestamo.toFixed(1)}%`}
+                    value={`${porcentajeEntradaDisplay.toFixed(1)}%`}
                     className="w-full p-3 bg-slate-800/40 border border-slate-600/40 rounded-lg font-semibold text-gray-300 cursor-default"
                   />
                 </div>
