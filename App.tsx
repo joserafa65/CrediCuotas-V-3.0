@@ -766,29 +766,29 @@ const Simulator = ({
                   {creditType === 'microcredito' ? '¿De cuanto es la garantia?' : '¿De cuanto es la entrada?'}
                 </label>
 
-                {creditType === 'hipotecario' && (
+                {(creditType === 'hipotecario' || creditType === 'vehicular' || creditType === 'microcredito') && (
                   <div className="flex items-center gap-2 mb-2">
                     <button
                       type="button"
-                      onClick={() => handlePorcentajeEntradaChange(10)}
+                      onClick={() => handlePorcentajeEntradaChange(creditType === 'hipotecario' ? 20 : 10)}
                       className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${
-                        Math.round(porcentajeEntradaDisplay) === 10
+                        Math.round(porcentajeEntradaDisplay) === (creditType === 'hipotecario' ? 20 : 10)
                           ? 'bg-turquoise border-turquoise text-white'
                           : 'bg-gray-700/60 border-gray-600 text-gray-300 hover:border-turquoise hover:text-white'
                       }`}
                     >
-                      10%
+                      {creditType === 'hipotecario' ? '20%' : '10%'}
                     </button>
                     <button
                       type="button"
-                      onClick={() => handlePorcentajeEntradaChange(20)}
+                      onClick={() => handlePorcentajeEntradaChange(30)}
                       className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${
-                        Math.round(porcentajeEntradaDisplay) === 20
+                        Math.round(porcentajeEntradaDisplay) === 30
                           ? 'bg-turquoise border-turquoise text-white'
                           : 'bg-gray-700/60 border-gray-600 text-gray-300 hover:border-turquoise hover:text-white'
                       }`}
                     >
-                      20%
+                      {creditType === 'hipotecario' ? '30%' : '20%'}
                     </button>
                     <div className="flex items-center gap-1.5">
                       <input
