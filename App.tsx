@@ -464,10 +464,10 @@ const MainMenu = ({
             className="group relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900
                        border-2 rounded-2xl p-4 transition-all duration-300
                        hover:shadow-2xl hover:-translate-y-1 sm:col-span-2"
-            style={{ borderColor: !isPremium ? 'rgba(156,163,175,0.2)' : 'rgba(236,72,153,0.3)' }}
+            style={{ borderColor: !isPremium ? 'rgba(156,163,175,0.2)' : 'rgba(59,130,246,0.35)' }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-pink-500/0 to-pink-500/0
-                            group-hover:from-pink-500/5 group-hover:to-pink-500/3 transition-all duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-blue-500/0
+                            group-hover:from-blue-500/5 group-hover:to-blue-500/3 transition-all duration-300" />
 
             {!isPremium && (
               <div className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center"
@@ -482,12 +482,12 @@ const MainMenu = ({
               <div
                 className="w-12 h-12 flex items-center justify-center rounded-full overflow-hidden transition-all duration-300 group-active:scale-110 flex-shrink-0"
                 style={{
-                  backgroundColor: !isPremium ? 'rgba(156,163,175,0.08)' : 'rgba(236,72,153,0.1)',
-                  border: !isPremium ? '2px solid rgba(156,163,175,0.2)' : '2px solid rgba(236,72,153,0.3)',
+                  backgroundColor: !isPremium ? 'rgba(156,163,175,0.08)' : 'rgba(59,130,246,0.1)',
+                  border: !isPremium ? '2px solid rgba(156,163,175,0.2)' : '2px solid rgba(59,130,246,0.3)',
                   opacity: !isPremium ? 0.6 : 1,
                 }}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke={!isPremium ? 'rgba(156,163,175,0.5)' : '#EC4899'} strokeWidth={1.8} className="w-6 h-6">
+                <svg viewBox="0 0 24 24" fill="none" stroke={!isPremium ? 'rgba(156,163,175,0.5)' : '#3B82F6'} strokeWidth={1.8} className="w-6 h-6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
               </div>
