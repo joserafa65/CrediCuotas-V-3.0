@@ -42,3 +42,17 @@ export const saveToHistory = (
 export const clearHistory = (): void => {
   localStorage.removeItem(HISTORY_KEY);
 };
+
+export const deleteHistoryEntry = (id: string): SimulationHistoryEntry[] => {
+  const history = getHistory().filter((e) => e.id !== id);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  return history;
+};
+
+export const renameHistoryEntry = (id: string, newName: string): SimulationHistoryEntry[] => {
+  const history = getHistory().map((e) =>
+    e.id === id ? { ...e, creditTitle: newName } : e
+  );
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  return history;
+};

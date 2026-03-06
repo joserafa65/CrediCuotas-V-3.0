@@ -265,6 +265,23 @@ const App = () => {
     });
   };
 
+  const handleCompareFromHistory = (entries: SimulationHistoryEntry[]) => {
+    const asScenarios: ScenarioEntry[] = entries.map((e, i) => ({
+      id: e.id,
+      label: `Escenario ${i + 1}`,
+      creditType: e.creditType,
+      creditTitle: e.creditTitle,
+      montoPrestamo: e.montoPrestamo,
+      plazoAnios: e.plazoAnios,
+      tasaInteresAnual: e.tasaInteresAnual,
+      cuotaMensual: e.cuotaMensual,
+      totalInteres: e.totalInteres,
+      terminasPagando: e.terminasPagando,
+    }));
+    setScenarios(asScenarios);
+    setShowComparator(true);
+  };
+
   const handleRemoveScenario = (id: string) => {
     setScenarios((prev) => prev.filter((s) => s.id !== id));
   };
@@ -346,6 +363,7 @@ const App = () => {
         <HistoryModal
           onClose={() => setShowHistory(false)}
           onLoadSimulation={handleLoadHistoryEntry}
+          onCompareSelected={handleCompareFromHistory}
         />
       )}
       {showComparator && (
