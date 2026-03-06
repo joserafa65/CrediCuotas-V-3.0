@@ -1330,6 +1330,13 @@ const ResultsDisplay = ({
           </div>
         </div>
 
+        <div className="mt-5 mb-7">
+          <DonutChart
+            capital={details.montoPrestamo}
+            intereses={results.totalInteres}
+          />
+        </div>
+
         <div className="text-center mb-7 bg-gradient-to-r from-turquoise/20 to-blue-500/20 rounded-xl p-5 border border-turquoise/30">
           <p className="text-sm text-gray-200 mb-2 font-light">
             Terminas Pagando un Total de
@@ -1414,13 +1421,6 @@ const ResultsDisplay = ({
             </button>
           </div>
         </div>
-      </div>
-
-      <div className="mt-5">
-        <DonutChart
-          capital={details.montoPrestamo}
-          intereses={results.totalInteres}
-        />
       </div>
 
       {showTable && (
