@@ -474,20 +474,25 @@ const Simulator = ({
 }) => {
   const config = creditTypeConfig[creditType];
 
+  const initialEntrada = config.defaultDetails.valorPropiedad - config.defaultDetails.montoPrestamo;
+  const initialPorcentajeEntrada = config.defaultDetails.valorPropiedad > 0
+    ? initialEntrada / config.defaultDetails.valorPropiedad
+    : 0;
+
   const [details, setDetails] = useState<LoanDetails>({
     ...baseLoanDetails,
     ...config.defaultDetails,
     ...initialDetails
   });
+  const [porcentajeEntrada, setPorcentajeEntrada] = useState(initialPorcentajeEntrada);
   const [results, setResults] = useState<CalculationResults | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   useEffect(() => {
-    setDetails({
-      ...baseLoanDetails,
-      ...config.defaultDetails,
-      ...initialDetails
-    });
+    const defaultDetails = { ...baseLoanDetails, ...config.defaultDetails, ...initialDetails };
+    setDetails(defaultDetails);
+    const e = defaultDetails.valorPropiedad - defaultDetails.montoPrestamo;
+    setPorcentajeEntrada(defaultDetails.valorPropiedad > 0 ? e / defaultDetails.valorPropiedad : 0);
     setResults(null);
   }, [initialDetails, creditType]);
 
@@ -508,44 +513,35 @@ const Simulator = ({
     setDetails((prev) => ({ ...prev, [field]: value }));
   };
 
-const handleValorPropiedadChange = (value: number) => {
-  // Para crédito de consumo, valorPropiedad y montoPrestamo son siempre iguales
-  if (creditType === 'consumo') {
+  const handleValorPropiedadChange = (value: number) => {
+    if (creditType === 'consumo') {
+      setDetails((prev) => ({
+        ...prev,
+        valorPropiedad: value,
+        montoPrestamo: value
+      }));
+      return;
+    }
+
+    const newEntrada = value * porcentajeEntrada;
+    const clampedEntrada = Math.min(newEntrada, value);
+    const newMontoPrestamo = value - clampedEntrada;
     setDetails((prev) => ({
       ...prev,
       valorPropiedad: value,
-      montoPrestamo: value
-    }));
-    return;
-  }
-
-  // Para otros tipos de crédito, mantener el cálculo con porcentaje
-  const newMontoPrestamo = value * (porcentajePrestamo / 100);
-  setDetails((prev) => ({
-    ...prev,
-    valorPropiedad: value,
-    montoPrestamo: Math.max(0, newMontoPrestamo)
-  }));
-};
-
-const handleMontoPrestamoChange = (value: number) => {
-  setDetails((prev) => ({
-    ...prev,
-    montoPrestamo: Math.max(0, value)
-  }));
-};
-
-  const handleEntradaChange = (value: number) => {
-    const newMontoPrestamo = details.valorPropiedad - value;
-    setDetails((prev) => ({
-      ...prev,
       montoPrestamo: Math.max(0, newMontoPrestamo)
     }));
   };
 
-  const handlePorcentajeChange = (newPercentage: number) => {
-    const calculatedAmount = details.valorPropiedad * (newPercentage / 100);
-    setDetails((prev) => ({ ...prev, montoPrestamo: calculatedAmount }));
+  const handleEntradaChange = (value: number) => {
+    if (details.valorPropiedad === 0) return;
+    const clampedEntrada = Math.min(value, details.valorPropiedad);
+    const newMontoPrestamo = details.valorPropiedad - clampedEntrada;
+    setPorcentajeEntrada(clampedEntrada / details.valorPropiedad);
+    setDetails((prev) => ({
+      ...prev,
+      montoPrestamo: Math.max(0, newMontoPrestamo)
+    }));
   };
 
   const handleCalculate = () => {
@@ -598,25 +594,10 @@ const handleMontoPrestamoChange = (value: number) => {
           </div>
 
           {creditType !== 'consumo' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <>
               <div>
                 <label className="block font-semibold text-white text-sm mb-2">
-                  ¿Cuánto necesito?
-                </label>
-                <input
-                  type="text"
-                  value={`$ ${formatCurrency(details.montoPrestamo)}`}
-                  onChange={(e) =>
-                    handleMontoPrestamoChange(
-                      Number(e.target.value.replace(/[^0-9]/g, ''))
-                    )
-                  }
-                  className="w-full p-3 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise font-semibold text-white transition-all"
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-white text-sm mb-2">
-                  ¿De cuánto es mi entrada?
+                  ¿De cuánto es la entrada?
                 </label>
                 <input
                   type="text"
@@ -629,29 +610,37 @@ const handleMontoPrestamoChange = (value: number) => {
                   className="w-full p-3 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise font-semibold text-white transition-all"
                 />
               </div>
-            </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block font-semibold text-white text-sm mb-2">
+                    ¿Cuánto necesito?
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={`$ ${formatCurrency(details.montoPrestamo)}`}
+                    className="w-full p-3 bg-slate-800/40 border border-slate-600/40 rounded-lg font-semibold text-gray-300 cursor-default"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-white text-sm mb-2">
+                    % del valor en préstamo
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${porcentajePrestamo.toFixed(1)}%`}
+                    className="w-full p-3 bg-slate-800/40 border border-slate-600/40 rounded-lg font-semibold text-gray-300 cursor-default"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 italic -mt-2">
+                Los valores se calculan automáticamente según el valor del activo y la entrada.
+              </p>
+            </>
           )}
         </div>
-
-        {creditType !== 'consumo' && (
-          <div className="mb-7">
-            <label className="font-semibold text-white text-sm flex justify-between items-center mb-3">
-              <span>¿Qué % de préstamo necesito?</span>
-              <span className="text-lg font-bold text-turquoise bg-slate-700/50 px-3 py-1.5 rounded-lg">
-                {porcentajePrestamo.toFixed(0)}%
-              </span>
-            </label>
-            <input
-              type="range"
-              min="1"
-              max="100"
-              step="1"
-              value={porcentajePrestamo}
-              onChange={(e) => handlePorcentajeChange(Number(e.target.value))}
-              className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-turquoise"
-            />
-          </div>
-        )}
 
         <div className="grid md:grid-cols-2 gap-5 mb-2">
           <div>
