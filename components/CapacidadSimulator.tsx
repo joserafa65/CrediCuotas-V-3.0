@@ -80,19 +80,21 @@ export const CapacidadSimulator = () => {
 
   return (
     <div>
-      <header className="flex justify-between items-start mb-6">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-            Capacidad de Pago
-          </h2>
-          <p className="text-gray-300 mt-2 text-sm md:text-base font-light">
-            Descubre cuanto credito puedes solicitar segun tu presupuesto.
-          </p>
-          <p className="text-xs text-gray-500 mt-2.5 italic max-w-md leading-relaxed">
-            El resultado es un estimado referencial basado en la formula de amortizacion estandar.
-          </p>
-        </div>
-      </header>
+      <div className="px-5 md:px-7">
+        <header className="flex justify-between items-start mb-6">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+              Capacidad de Pago
+            </h2>
+            <p className="text-gray-300 mt-2 text-sm md:text-base font-light">
+              Descubre cuanto credito puedes solicitar segun tu presupuesto.
+            </p>
+            <p className="text-xs text-gray-500 mt-2.5 italic max-w-md leading-relaxed">
+              El resultado es un estimado referencial basado en la formula de amortizacion estandar.
+            </p>
+          </div>
+        </header>
+      </div>
 
       <div className="bg-slate-800/40 border border-slate-700/60 p-5 md:p-7 rounded-2xl shadow-lg">
         <div className="space-y-5 mb-7">

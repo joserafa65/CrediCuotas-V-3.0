@@ -322,13 +322,15 @@ const App = () => {
         )}
         {screen === 'capacidad' && (
           <div>
-            <button
-              onClick={backToMenu}
-              className="flex items-center gap-2 bg-turquoise/90 text-white font-medium px-5 py-2.5 rounded-full hover:bg-turquoise transition-colors mb-6 shadow-md"
-            >
-              <ArrowLeftIcon className="w-4 h-4" />
-              Volver al menu
-            </button>
+            <div className="px-5 md:px-7">
+              <button
+                onClick={backToMenu}
+                className="flex items-center gap-2 bg-turquoise/90 text-white font-medium px-5 py-2.5 rounded-full hover:bg-turquoise transition-colors mb-6 shadow-md"
+              >
+                <ArrowLeftIcon className="w-4 h-4" />
+                Volver al menu
+              </button>
+            </div>
             <CapacidadSimulator />
           </div>
         )}
@@ -717,29 +719,31 @@ const Simulator = ({
 
   return (
     <div>
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 bg-turquoise/90 text-white font-medium px-5 py-2.5 rounded-full hover:bg-turquoise transition-colors mb-6 shadow-md"
-      >
-        <ArrowLeftIcon className="w-4 h-4" />
-        Volver al menu
-      </button>
+      <div className="px-5 md:px-7">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 bg-turquoise/90 text-white font-medium px-5 py-2.5 rounded-full hover:bg-turquoise transition-colors mb-6 shadow-md"
+        >
+          <ArrowLeftIcon className="w-4 h-4" />
+          Volver al menu
+        </button>
 
-      <header className="flex justify-between items-start mb-6">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-            Simulador de {config.title}
-          </h2>
-          <p className="text-gray-300 mt-2 text-sm md:text-base font-light">
-            Ingresa los datos para simular tu credito.
-          </p>
-          <p className="text-xs text-gray-500 mt-2.5 italic max-w-md leading-relaxed">
-            Los resultados obtenidos son un ejercicio estimativo y pueden variar
-            segun la entidad financiera, el perfil del solicitante, y las
-            condiciones especificas del credito.
-          </p>
-        </div>
-      </header>
+        <header className="flex justify-between items-start mb-6">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+              Simulador de {config.title}
+            </h2>
+            <p className="text-gray-300 mt-2 text-sm md:text-base font-light">
+              Ingresa los datos para simular tu credito.
+            </p>
+            <p className="text-xs text-gray-500 mt-2.5 italic max-w-md leading-relaxed">
+              Los resultados obtenidos son un ejercicio estimativo y pueden variar
+              segun la entidad financiera, el perfil del solicitante, y las
+              condiciones especificas del credito.
+            </p>
+          </div>
+        </header>
+      </div>
 
       <div className="bg-slate-800/40 border border-slate-700/60 p-5 md:p-7 rounded-2xl shadow-lg">
         <div className="space-y-5 mb-7">
@@ -1244,14 +1248,16 @@ const ResultsDisplay = ({
 
   return (
     <div className="animate-fade-in">
-      <header className="mb-6">
-        <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-          Resumen de tu {title}
-        </h2>
-        <p className="text-gray-300 mt-2 text-sm md:text-base font-light">
-          Estos son los resultados de tu simulacion.
-        </p>
-      </header>
+      <div className="px-5 md:px-7">
+        <header className="mb-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+            Resumen de tu {title}
+          </h2>
+          <p className="text-gray-300 mt-2 text-sm md:text-base font-light">
+            Estos son los resultados de tu simulacion.
+          </p>
+        </header>
+      </div>
 
       <div className="bg-slate-800/40 border border-slate-700/60 p-5 md:p-7 rounded-2xl shadow-lg">
         <div className="text-center mb-7">
