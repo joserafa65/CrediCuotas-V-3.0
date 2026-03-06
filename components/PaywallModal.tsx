@@ -35,11 +35,12 @@ export const PaywallModal = ({ onClose }: PaywallModalProps) => {
   const premiumFeatures = [
     'Simulador Hipotecario',
     'Simulador Vehicular',
-    'Simulador Microcrédito',
+    'Simulador Microcredito',
+    'Calculadora de Capacidad de Pago',
     'Simula cuotas extraordinarias',
     'Exportar a PDF',
     'Exportar a Excel',
-    'Tabla de amortización completa',
+    'Tabla de amortizacion completa',
   ];
 
   return (
