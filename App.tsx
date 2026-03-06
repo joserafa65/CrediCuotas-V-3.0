@@ -485,6 +485,9 @@ const Simulator = ({
     ...initialDetails
   });
   const [porcentajeEntrada, setPorcentajeEntrada] = useState(initialPorcentajeEntrada);
+  const [porcentajeEntradaInput, setPorcentajeEntradaInput] = useState(
+    String(Math.round(initialPorcentajeEntrada * 100))
+  );
   const [results, setResults] = useState<CalculationResults | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
@@ -492,7 +495,9 @@ const Simulator = ({
     const defaultDetails = { ...baseLoanDetails, ...config.defaultDetails, ...initialDetails };
     setDetails(defaultDetails);
     const e = defaultDetails.valorPropiedad - defaultDetails.montoPrestamo;
-    setPorcentajeEntrada(defaultDetails.valorPropiedad > 0 ? e / defaultDetails.valorPropiedad : 0);
+    const pct = defaultDetails.valorPropiedad > 0 ? e / defaultDetails.valorPropiedad : 0;
+    setPorcentajeEntrada(pct);
+    setPorcentajeEntradaInput(String(Math.round(pct * 100)));
     setResults(null);
   }, [initialDetails, creditType]);
 
@@ -553,7 +558,22 @@ const Simulator = ({
     if (details.valorPropiedad === 0) return;
     const clampedEntrada = Math.min(value, details.valorPropiedad);
     const newMontoPrestamo = details.valorPropiedad - clampedEntrada;
-    setPorcentajeEntrada(clampedEntrada / details.valorPropiedad);
+    const newPct = clampedEntrada / details.valorPropiedad;
+    setPorcentajeEntrada(newPct);
+    setPorcentajeEntradaInput(String(Math.round(newPct * 100)));
+    setDetails((prev) => ({
+      ...prev,
+      montoPrestamo: Math.max(0, newMontoPrestamo)
+    }));
+  };
+
+  const handlePorcentajeEntradaChange = (pct: number) => {
+    if (details.valorPropiedad === 0) return;
+    const clampedPct = Math.min(Math.max(pct, 0), 100);
+    const newEntrada = details.valorPropiedad * (clampedPct / 100);
+    const newMontoPrestamo = details.valorPropiedad - newEntrada;
+    setPorcentajeEntrada(clampedPct / 100);
+    setPorcentajeEntradaInput(String(clampedPct));
     setDetails((prev) => ({
       ...prev,
       montoPrestamo: Math.max(0, newMontoPrestamo)
@@ -615,6 +635,59 @@ const Simulator = ({
                 <label className="block font-semibold text-white text-sm mb-2">
                   {creditType === 'microcredito' ? '¿De cuánto es la garantía?' : '¿De cuánto es la entrada?'}
                 </label>
+
+                {creditType === 'hipotecario' && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => handlePorcentajeEntradaChange(10)}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${
+                        Math.round(porcentajeEntradaDisplay) === 10
+                          ? 'bg-turquoise border-turquoise text-white'
+                          : 'bg-gray-700/60 border-gray-600 text-gray-300 hover:border-turquoise hover:text-white'
+                      }`}
+                    >
+                      10%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePorcentajeEntradaChange(20)}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${
+                        Math.round(porcentajeEntradaDisplay) === 20
+                          ? 'bg-turquoise border-turquoise text-white'
+                          : 'bg-gray-700/60 border-gray-600 text-gray-300 hover:border-turquoise hover:text-white'
+                      }`}
+                    >
+                      20%
+                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={porcentajeEntradaInput}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^0-9]/g, '');
+                          setPorcentajeEntradaInput(raw);
+                        }}
+                        onBlur={() => {
+                          const num = parseInt(porcentajeEntradaInput, 10);
+                          if (!isNaN(num)) handlePorcentajeEntradaChange(num);
+                          else setPorcentajeEntradaInput(String(Math.round(porcentajeEntradaDisplay)));
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const num = parseInt(porcentajeEntradaInput, 10);
+                            if (!isNaN(num)) handlePorcentajeEntradaChange(num);
+                          }
+                        }}
+                        placeholder="0"
+                        className="w-16 p-2 bg-gray-700/80 border border-gray-600 rounded-lg focus:ring-2 focus:ring-turquoise focus:border-turquoise font-semibold text-white text-center transition-all text-sm"
+                      />
+                      <span className="text-gray-400 font-semibold text-sm">%</span>
+                    </div>
+                  </div>
+                )}
+
                 <input
                   type="text"
                   value={`$ ${formatCurrency(entrada)}`}
@@ -645,17 +718,19 @@ const Simulator = ({
                     className="w-full p-3 bg-slate-800/40 border border-slate-600/40 rounded-lg font-semibold text-gray-300 cursor-default"
                   />
                 </div>
-                <div>
-                  <label className="block font-semibold text-white text-sm mb-2">
-                    {creditType === 'microcredito' ? '% de garantía' : '% de entrada'}
-                  </label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={`${porcentajeEntradaDisplay.toFixed(1)}%`}
-                    className="w-full p-3 bg-slate-800/40 border border-slate-600/40 rounded-lg font-semibold text-gray-300 cursor-default"
-                  />
-                </div>
+                {creditType !== 'hipotecario' && (
+                  <div>
+                    <label className="block font-semibold text-white text-sm mb-2">
+                      {creditType === 'microcredito' ? '% de garantía' : '% de entrada'}
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${porcentajeEntradaDisplay.toFixed(1)}%`}
+                      className="w-full p-3 bg-slate-800/40 border border-slate-600/40 rounded-lg font-semibold text-gray-300 cursor-default"
+                    />
+                  </div>
+                )}
               </div>
               <p className="text-xs text-gray-500 italic -mt-2">
                 Los valores se calculan automáticamente según el valor del activo y la entrada.
