@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 const REVENUECAT_API_KEY_IOS = 'appl_REPLACE_WITH_YOUR_IOS_KEY';
 const REVENUECAT_API_KEY_ANDROID = 'goog_REPLACE_WITH_YOUR_ANDROID_KEY';
 const ENTITLEMENT_ID = 'premium';
-const PRODUCT_ID = 'credicuotas_premium_lifetime';
+const PRODUCT_ID = 'com.labappstudio.credicuotas.pro.lifetime';
 
 interface PurchaseContextValue {
   isPremium: boolean;
