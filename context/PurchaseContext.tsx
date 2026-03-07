@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 
-const REVENUECAT_API_KEY_IOS = 'appl_ukyhiDdHwFcMuGQJopDPHgKtoNY';
+const REVENUECAT_API_KEY_IOS = 'appl_REPLACE_WITH_YOUR_IOS_KEY';
 const REVENUECAT_API_KEY_ANDROID = 'goog_REPLACE_WITH_YOUR_ANDROID_KEY';
 const ENTITLEMENT_ID = 'premium';
 const PRODUCT_ID = 'com.labappstudio.credicuotas.pro.lifetime';
@@ -29,14 +29,55 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
   const [isLoading, setIsLoading] = useState(true);
 
   const checkEntitlement = useCallback(async () => {
-    setIsPremium(true);
-    setIsLoading(false);
+    if (!isNative) {
+      setIsLoading(false);
+      return;
+    }
+    try {
+      const { Purchases } = await import('@revenuecat/purchases-capacitor');
+      const { customerInfo } = await Purchases.getCustomerInfo();
+      const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+      setIsPremium(!!entitlement?.isActive);
+    } catch {
+      setIsPremium(false);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    setIsPremium(true);
-    setIsLoading(false);
-  }, []);
+    if (!isNative) {
+      setIsLoading(false);
+      return;
+    }
+
+    const platform = Capacitor.getPlatform();
+    const apiKey = platform === 'ios' ? REVENUECAT_API_KEY_IOS : REVENUECAT_API_KEY_ANDROID;
+
+    const listenerRef = { remove: () => {} };
+
+    import('@revenuecat/purchases-capacitor').then(({ Purchases, LOG_LEVEL }) => {
+      Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
+      Purchases.configure({ apiKey }).then(() => {
+        checkEntitlement();
+      }).catch(() => {
+        setIsLoading(false);
+      });
+
+      Purchases.addCustomerInfoUpdateListener((customerInfo) => {
+        const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+        setIsPremium(!!entitlement?.isActive);
+      }).then((listener) => {
+        listenerRef.remove = listener.remove;
+      });
+    }).catch(() => {
+      setIsLoading(false);
+    });
+
+    return () => {
+      listenerRef.remove();
+    };
+  }, [checkEntitlement]);
 
   const purchasePremium = useCallback(async () => {
     if (!isNative) {
