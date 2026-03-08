@@ -66,7 +66,7 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
       Purchases.addCustomerInfoUpdateListener((customerInfo) => {
         const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
         setIsPremium(!!entitlement?.isActive);
-      }).then((listener) => {
+      }).then((listener: any) => {
         listenerRef.remove = listener.remove;
       });
     }).catch(() => {
@@ -83,29 +83,37 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
       alert('Las compras en la app solo están disponibles en dispositivos móviles.');
       return;
     }
+
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
-      const { offerings } = await Purchases.getOfferings();
+      const offerings = await Purchases.getOfferings();
       
-      // Se utiliza el offering marcado como "Current" en el dashboard de RevenueCat
-      const offering = offerings.current;
+      // Intentamos obtener el offering marcado como default, o el que se llama 'credicuotas'
+      const offering = offerings.current || offerings.all['credicuotas'];
 
-      // Se busca específicamente el paquete de tipo 'lifetime' configurado como $rc_lifetime
-      const targetPackage = offering?.lifetime;
+      if (!offering) {
+        console.error("No se encontró el offering");
+        alert("El producto premium no está disponible en este momento.");
+        return;
+      }
+
+      // Usamos la propiedad .lifetime que mapea automáticamente al paquete $rc_lifetime
+      const targetPackage = offering.lifetime;
 
       if (!targetPackage) {
-        console.error("No se encontró el offering o el paquete lifetime");
-        alert("El producto premium no está disponible en este momento.");
+        console.error("No se encontró el paquete lifetime en el offering");
+        alert("No se pudo cargar el paquete de compra.");
         return;
       }
 
       const { customerInfo } = await Purchases.purchasePackage({ aPackage: targetPackage });
       const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
       setIsPremium(!!entitlement?.isActive);
+
     } catch (error: any) {
-      console.error("Error detallado de compra:", JSON.stringify(error));
       if (!error?.userCancelled) {
-        alert("Ocurrió un error al procesar la compra. Inténtalo de nuevo.");
+        console.error("Error de compra:", error);
+        alert("Ocurrió un error al procesar la compra.");
       }
     }
   }, []);
@@ -121,12 +129,12 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
       const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
       setIsPremium(!!entitlement?.isActive);
       if (entitlement?.isActive) {
-        alert('¡Compras restauradas exitosamente! Ya tienes acceso Premium.');
+        alert('¡Compras restauradas exitosamente!');
       } else {
-        alert('No se encontraron compras previas asociadas a tu cuenta.');
+        alert('No se encontraron compras previas.');
       }
     } catch {
-      alert('Ocurrió un error al restaurar las compras. Inténtalo de nuevo.');
+      alert('Ocurrió un error al restaurar las compras.');
     }
   }, []);
 
