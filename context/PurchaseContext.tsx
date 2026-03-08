@@ -87,9 +87,9 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
       const offerings = await Purchases.getOfferings();
-      
-      // Intentamos obtener el offering marcado como default, o el que se llama 'credicuotas'
-      const offering = offerings.current || offerings.all['credicuotas'];
+
+      // Obtenemos el offering marcado como default
+      const offering = offerings.current;
 
       if (!offering) {
         console.error("No se encontró el offering");
