@@ -4,7 +4,6 @@ import { Capacitor } from '@capacitor/core';
 const REVENUECAT_API_KEY_IOS = 'appl_ukyhiDdHwFcMuGQJopDPHgKtoNY';
 const REVENUECAT_API_KEY_ANDROID = 'goog_REPLACE_WITH_YOUR_ANDROID_KEY';
 const ENTITLEMENT_ID = 'premium';
-const PRODUCT_ID = 'com.labappstudio.credicuotas.pro.lifetime';
 
 interface PurchaseContextValue {
   isPremium: boolean;
@@ -87,22 +86,26 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
       const { offerings } = await Purchases.getOfferings();
+      
+      // Se utiliza el offering marcado como "Current" en el dashboard de RevenueCat
       const offering = offerings.current;
 
-      const targetPackage = offering?.availablePackages?.find(
-        (pkg) => pkg.product.identifier === PRODUCT_ID
-      );
+      // Se busca específicamente el paquete de tipo 'lifetime' configurado como $rc_lifetime
+      const targetPackage = offering?.lifetime;
 
       if (!targetPackage) {
-        throw new Error('Premium product not found');
+        console.error("No se encontró el offering o el paquete lifetime");
+        alert("El producto premium no está disponible en este momento.");
+        return;
       }
 
       const { customerInfo } = await Purchases.purchasePackage({ aPackage: targetPackage });
       const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
       setIsPremium(!!entitlement?.isActive);
     } catch (error: any) {
+      console.error("Error detallado de compra:", JSON.stringify(error));
       if (!error?.userCancelled) {
-        throw error;
+        alert("Ocurrió un error al procesar la compra. Inténtalo de nuevo.");
       }
     }
   }, []);
