@@ -32,13 +32,21 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
       setIsLoading(false);
       return;
     }
+
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
       const { customerInfo } = await Purchases.getCustomerInfo();
+
       const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+
+      console.log("DEBUG entitlement:", entitlement);
+
       setIsPremium(!!entitlement?.isActive);
-    } catch {
+
+    } catch (error) {
+      console.log("DEBUG checkEntitlement error:", error);
       setIsPremium(false);
+
     } finally {
       setIsLoading(false);
     }
@@ -55,30 +63,47 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
 
     const listenerRef = { remove: () => {} };
 
-    import('@revenuecat/purchases-capacitor').then(({ Purchases, LOG_LEVEL }) => {
-      Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
-      Purchases.configure({ apiKey }).then(() => {
-        checkEntitlement();
-      }).catch(() => {
+    import('@revenuecat/purchases-capacitor')
+      .then(({ Purchases, LOG_LEVEL }) => {
+
+        console.log("DEBUG RevenueCat configure start");
+
+        Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
+
+        Purchases.configure({ apiKey })
+          .then(() => {
+            console.log("DEBUG RevenueCat configured OK");
+            checkEntitlement();
+          })
+          .catch((error) => {
+            console.log("DEBUG configure error:", error);
+            setIsLoading(false);
+          });
+
+        Purchases.addCustomerInfoUpdateListener((customerInfo) => {
+          const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+
+          console.log("DEBUG customerInfoUpdate:", customerInfo);
+
+          setIsPremium(!!entitlement?.isActive);
+        }).then((listener: any) => {
+          listenerRef.remove = listener.remove;
+        });
+
+      })
+      .catch((error) => {
+        console.log("DEBUG RevenueCat import error:", error);
         setIsLoading(false);
       });
-
-      Purchases.addCustomerInfoUpdateListener((customerInfo) => {
-        const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
-        setIsPremium(!!entitlement?.isActive);
-      }).then((listener: any) => {
-        listenerRef.remove = listener.remove;
-      });
-    }).catch(() => {
-      setIsLoading(false);
-    });
 
     return () => {
       listenerRef.remove();
     };
+
   }, [checkEntitlement]);
 
   const purchasePremium = useCallback(async () => {
+
     if (!isNative) {
       alert('Las compras en la app solo están disponibles en dispositivos móviles.');
       return;
@@ -86,56 +111,95 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
 
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
+
+      console.log("DEBUG purchasePremium start");
+
       const offerings = await Purchases.getOfferings();
 
-      // Obtenemos el offering marcado como default
+      console.log("DEBUG offerings RAW:", JSON.stringify(offerings));
+      console.log("DEBUG offerings.current:", JSON.stringify(offerings.current));
+      console.log("DEBUG offerings.all:", JSON.stringify(offerings.all));
+
       const offering = offerings.current;
 
       if (!offering) {
-        console.error("No se encontró el offering");
-        alert("El producto premium no está disponible en este momento.");
+
+        console.log("DEBUG no offering returned");
+
+     const products = await Purchases.getProducts({
+  productIdentifiers: ['com.labappstudio.credicuotas.pro.lifetime']
+});
+
+        console.log("DEBUG direct products from Apple:", JSON.stringify(products));
+
+        alert("Error técnico: RevenueCat no recibió offerings.");
         return;
       }
 
-      // Usamos la propiedad .lifetime que mapea automáticamente al paquete $rc_lifetime
-      const targetPackage = offering.lifetime;
+   const targetPackage = offering.availablePackages[0];
 
       if (!targetPackage) {
-        console.error("No se encontró el paquete lifetime en el offering");
-        alert("No se pudo cargar el paquete de compra.");
+
+        console.log("DEBUG available packages:", JSON.stringify(offering.availablePackages));
+
+        alert("Error técnico: existe offering pero no paquete lifetime.");
         return;
       }
 
-      const { customerInfo } = await Purchases.purchasePackage({ aPackage: targetPackage });
+      console.log("DEBUG purchasing package:", targetPackage);
+
+      const { customerInfo } = await Purchases.purchasePackage({
+        aPackage: targetPackage
+      });
+
+      console.log("DEBUG purchase result:", customerInfo);
+
       const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+
       setIsPremium(!!entitlement?.isActive);
 
     } catch (error: any) {
+
+      console.error("ERROR CRITICO COMPRA:", error);
+
       if (!error?.userCancelled) {
-        console.error("Error de compra:", error);
-        alert("Ocurrió un error al procesar la compra.");
+        alert(`Error al procesar compra: ${error?.message || 'Error desconocido'}`);
       }
     }
+
   }, []);
 
   const restorePurchases = useCallback(async () => {
+
     if (!isNative) {
       alert('La restauración de compras solo está disponible en dispositivos móviles.');
       return;
     }
+
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
+
       const { customerInfo } = await Purchases.restorePurchases();
+
+      console.log("DEBUG restore result:", customerInfo);
+
       const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
+
       setIsPremium(!!entitlement?.isActive);
+
       if (entitlement?.isActive) {
         alert('¡Compras restauradas exitosamente!');
       } else {
         alert('No se encontraron compras previas.');
       }
-    } catch {
+
+    } catch (error) {
+
+      console.log("DEBUG restore error:", error);
+
       alert('Ocurrió un error al restaurar las compras.');
     }
+
   }, []);
 
   return (
