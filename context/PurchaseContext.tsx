@@ -24,17 +24,21 @@ export const usePurchase = () => useContext(PurchaseContext);
 const isNative = Capacitor.isNativePlatform();
 
 export const PurchaseProvider = ({ children }: { children: React.ReactNode }) => {
+
   const [isPremium, setIsPremium] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const checkEntitlement = useCallback(async () => {
+
     if (!isNative) {
       setIsLoading(false);
       return;
     }
 
     try {
+
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
+
       const { customerInfo } = await Purchases.getCustomerInfo();
 
       const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
@@ -44,15 +48,20 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
       setIsPremium(!!entitlement?.isActive);
 
     } catch (error) {
+
       console.log("DEBUG checkEntitlement error:", error);
       setIsPremium(false);
 
     } finally {
+
       setIsLoading(false);
+
     }
+
   }, []);
 
   useEffect(() => {
+
     if (!isNative) {
       setIsLoading(false);
       return;
@@ -72,28 +81,39 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
 
         Purchases.configure({ apiKey })
           .then(() => {
+
             console.log("DEBUG RevenueCat configured OK");
+
             checkEntitlement();
+
           })
           .catch((error) => {
+
             console.log("DEBUG configure error:", error);
             setIsLoading(false);
+
           });
 
         Purchases.addCustomerInfoUpdateListener((customerInfo) => {
+
           const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
 
           console.log("DEBUG customerInfoUpdate:", customerInfo);
 
           setIsPremium(!!entitlement?.isActive);
+
         }).then((listener: any) => {
+
           listenerRef.remove = listener.remove;
+
         });
 
       })
       .catch((error) => {
+
         console.log("DEBUG RevenueCat import error:", error);
         setIsLoading(false);
+
       });
 
     return () => {
@@ -110,6 +130,7 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
     }
 
     try {
+
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
 
       console.log("DEBUG purchasePremium start");
@@ -118,7 +139,6 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
 
       console.log("DEBUG offerings RAW:", JSON.stringify(offerings));
       console.log("DEBUG offerings.current:", JSON.stringify(offerings.current));
-      console.log("DEBUG offerings.all:", JSON.stringify(offerings.all));
 
       const offering = offerings.current;
 
@@ -126,24 +146,22 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
 
         console.log("DEBUG no offering returned");
 
-     const products = await Purchases.getProducts({
-  productIdentifiers: ['com.labappstudio.credicuotas.pro.lifetime']
-});
-
-        console.log("DEBUG direct products from Apple:", JSON.stringify(products));
-
-        alert("Error técnico: RevenueCat no recibió offerings.");
+        alert("Error técnico: no se encontraron productos disponibles.");
         return;
+
       }
 
-   const targetPackage = offering.availablePackages[0];
+      const targetPackage = offering.availablePackages.find(
+        (pkg) => pkg.identifier === 'lifetime'
+      ) || offering.availablePackages[0];
 
       if (!targetPackage) {
 
         console.log("DEBUG available packages:", JSON.stringify(offering.availablePackages));
 
-        alert("Error técnico: existe offering pero no paquete lifetime.");
+        alert("Error técnico: no hay paquetes disponibles.");
         return;
+
       }
 
       console.log("DEBUG purchasing package:", targetPackage);
@@ -163,8 +181,11 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
       console.error("ERROR CRITICO COMPRA:", error);
 
       if (!error?.userCancelled) {
+
         alert(`Error al procesar compra: ${error?.message || 'Error desconocido'}`);
+
       }
+
     }
 
   }, []);
@@ -172,11 +193,14 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
   const restorePurchases = useCallback(async () => {
 
     if (!isNative) {
+
       alert('La restauración de compras solo está disponible en dispositivos móviles.');
       return;
+
     }
 
     try {
+
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
 
       const { customerInfo } = await Purchases.restorePurchases();
@@ -188,9 +212,13 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
       setIsPremium(!!entitlement?.isActive);
 
       if (entitlement?.isActive) {
+
         alert('¡Compras restauradas exitosamente!');
+
       } else {
+
         alert('No se encontraron compras previas.');
+
       }
 
     } catch (error) {
@@ -198,13 +226,18 @@ export const PurchaseProvider = ({ children }: { children: React.ReactNode }) =>
       console.log("DEBUG restore error:", error);
 
       alert('Ocurrió un error al restaurar las compras.');
+
     }
 
   }, []);
 
   return (
+
     <PurchaseContext.Provider value={{ isPremium, isLoading, purchasePremium, restorePurchases }}>
       {children}
     </PurchaseContext.Provider>
+
   );
+
 };
+
