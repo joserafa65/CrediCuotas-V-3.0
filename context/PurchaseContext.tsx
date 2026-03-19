@@ -25,7 +25,7 @@ const isNative = Capacitor.isNativePlatform();
 
 export const PurchaseProvider = ({ children }: { children: React.ReactNode }) => {
 
-  const [isPremium, setIsPremium] = useState(false);
+  const [isPremium, setIsPremium] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
   const checkEntitlement = useCallback(async () => {
